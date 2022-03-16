@@ -1,0 +1,20 @@
+Algoritmo PC
+CODIGO		R1	R2	P  	LINHA		COMENTARIO
+LDI 		0	-1	X	0		#Valor das repetições no Loop
+LDI		1	-1	X	1		#Linha do salto do jump
+#Coloca elementos no vetor
+LDI		2	-1	  X 			#Coloca nos registradores o valor que sera usado
+STD		2	-1	 20 			#Salva na memoria aqueles valores
+LDI		2	-1	  X 			#Coloca nos registradores o valor que sera usado
+STD		2	-1	 21 			#Salva na memoria aqueles valores
+LDI		2	-1	  X 			#Coloca nos registradores o valor que sera usado
+STD		2	-1	 22 			#Salva na memoria aqueles valores
+LDI		2	-1	  X 			#Coloca nos registradores o valor que sera usado
+STD		2	-1	 23 			#Salva na memoria aqueles valores
+LDI		2	-1	  X 			#Coloca nos registradores o valor que sera usado
+STD		2	-1	 24 			#Salva na memoria aqueles valores
+LDI		2	-1	  X 			#Coloca nos registradores o valor que sera usado
+STD		2	-1	 25 			#Salva na memoria aqueles valores
+LDI		2	-1	  X 			#Coloca nos registradores o valor que sera usado
+STD		2	-1	 26 			#Salva na memoria aqueles valores
+#Faz o bubbleSort do algoritmo

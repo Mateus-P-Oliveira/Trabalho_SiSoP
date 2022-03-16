@@ -1,0 +1,23 @@
+Programa A 7 Registradores -1 é não utilizado
+CODIGO		R1	R2	P											Linhas
+LDI		0	-1	Valor da repetição									0
+LDI		1	-1	15 			#LINHA DE SALTO DO CASO MENOR DE ZERO				1
+LDI		2 	-1	-1                       #Valor Negativo para ser armazenado				2
+LDI		3	-1	14                      #LINHA DE SALTO DO STOP						3
+LDI		4	-1	1	#Carrega o inicio do Fibonacci							4
+LDI		5	-1	20      #Carrego o primeiro valor da memoria que ira armazenar a memoria de Fibo	5		
+#JMP PARA TESTAR O ZERO
+JMPIL		1	0	-1 #Se o R0 for menor que 0 salta para onde ta o stop					6
+#LOOP DE FIBONACCI						
+JMPIE		3	0	-1 #Se O R0 for igual a 0 ele para o programa						7
+STX		5	4	-1 #Armazeno na memoria de posição 20 o primeiro valor de fibonacci			8
+ADDI		5	-1	 1 #Movo 1 na posição de memoria de fibonacci						9
+LDX		6	4	-1 #Salvo o valor previo de Fibonacci no R6						10		
+ADD		4	6	-1 #Faço R4 = R4 + R6 									11
+SUBI		0	-1	 1 #Diminuo 1 da sequencia de valores de RO						12
+JMP		-1	-1	 7 #LINHA DO SALTO DO MEU LOOP DE FIBONACCI						13
+#FIM DO PROGRAMA CASO TENHA TIDO SEQUENCIA				
+STOP		-1	-1	-1  #Termina o programa									14
+#FIM DO PROGRAMA CASO TENHA SIDO USADO UM ZERO	
+STD		 2	-1	20 #Salvo -1 no inicio da memoria							15	
+STOP		-1	-1	-1  #Termina o programa									16
