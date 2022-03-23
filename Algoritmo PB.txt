@@ -10,7 +10,7 @@ JMPIL		1	 0 	-1	5		#Se R0 for menor que 0 salta pro fim
 #LOOP do Fatorial
 MULT		3	0	-1	6		#Multiplico o valor dele por ele mesmo
 SUBI		0	-1	 1 	7		#Diminuo o valor do numero fatoral
-JMPIG		0	2	 -1	8		#Pulo para o inicio do Loop
+JMPGE		0	2	 -1	8		#Pulo para o inicio do Loop  //Insrução Criada
 #FIM do progama para o Fatoral
 STD		0	-1	 20	9		#Armazeno na memoria o resultado do faotrial
 STOP   		-1	-1	-1	10		#Termina o progama
