@@ -78,16 +78,21 @@ public class Sistema {
 				// EXECUTA INSTRUCAO NO ir
 					switch (ir.opc) { // para cada opcode, sua execução
 
+
 						case LDI: // Rd ← k
+
 							reg[ir.r1] = ir.p;
 							pc++;
 							break;
+
 
 						case STD: // [A] ← Rs
 							    m[ir.p].opc = Opcode.DATA;
 							    m[ir.p].p = reg[ir.r1];
 							    pc++;
 						break;
+
+
 
 						case LDD: // Rd <- [A] //Here
 						    //m[ir.p].opc = Opcode.DATA; //Leitura não precisa saber se é um dado
@@ -108,21 +113,27 @@ public class Sistema {
 						break;
 
 						case ADD: // Rd ← Rd + Rs
+
 							reg[ir.r1] = reg[ir.r1] + reg[ir.r2];
 							pc++;
 							break;
 
+
 						case MULT: // Rd ← Rd * Rs
+
 							reg[ir.r1] = reg[ir.r1] * reg[ir.r2];
 							// gera um overflow
 							// -->  LIGA INT  (1)
 							pc++;
 							break;
 
+
 						case ADDI: // Rd ← Rd + k
+
 							reg[ir.r1] = reg[ir.r1] + ir.p;
 							pc++;
 							break;
+
 
 						case SUBI: //Here
 							reg[ir.r1] = reg[ir.r1] + ir.p;
@@ -130,9 +141,16 @@ public class Sistema {
 						break;
 
 						case SUB: // Rd ← Rd - Rs
+
 							reg[ir.r1] = reg[ir.r1] - reg[ir.r2];
 							pc++;
 							break;
+
+						case JMP: //  PC <- k
+								pc = ir.p;
+						     break;
+						
+						case JMPIG: // If Rc > 0 Then PC <- Rs Else PC <- PC +1
 
 						case JMPI: // Here
 								pc = ir.r1;
@@ -151,6 +169,7 @@ public class Sistema {
 							break;
 						
 						case JMPIG: // If Rc > 0 Then PC ← Rs Else PC ← PC +1
+
 							if (reg[ir.r2] > 0) {
 								pc = reg[ir.r1];
 							} else {
@@ -158,17 +177,21 @@ public class Sistema {
 							}
 							break;
 
+
 						case JMPIE: // If Rc = 0 Then PC ← Rs Else PC ← PC +1
+
 							if (reg[ir.r2] == 0) {
 								pc = reg[ir.r1];
 							} else {
 								pc++;
 							}
 							break;
+
 						
 						case JMPIM://Here
 							pc =  m[ir.p].p;
 						break;
+
 
 						case STOP: // por enquanto, para execucao
 							break;
@@ -277,10 +300,13 @@ public class Sistema {
     // ------------------- instancia e testa sistema
 	public static void main(String args[]) {
 		Sistema s = new Sistema();
-	    s.roda(progs.fibonacci10);           // "progs" significa acesso/referencia ao programa em memoria secundaria
+
+	    //s.roda(progs.fibonacci10);           // "progs" significa acesso/referencia ao programa em memoria secundaria
 		// s.roda(progs.progMinimo);
 		// s.roda(progs.fatorial);
-	}
+		s.roda(progs.PB);
+	}	
+
     // -------------------------------------------------------------------------------------------------------
     // --------------- TUDO ABAIXO DE MAIN É AUXILIAR PARA FUNCIONAMENTO DO SISTEMA - nao faz parte 
 
@@ -342,7 +368,28 @@ public class Sistema {
 			new Word(Opcode.JMP, -1, -1, 4),     // 7   	vai p posicao 4
 			new Word(Opcode.STD, 1, -1, 10),     // 8   	coloca valor de r1 na posição 10
 			new Word(Opcode.STOP, -1, -1, -1),    // 9   	stop
-			new Word(Opcode.DATA, -1, -1, -1) };  // 10   ao final o valor do fatorial estará na posição 10 da memória                                    
+
+			new Word(Opcode.DATA, -1, -1, -1) };  // 10   ao final o valor do fatorial estará na posição 10 da memória
+
+		public Word[] PB = new Word[]{
+
+			new Word(Opcode.LDI, 0, -1, -6),      // 0   	Valor armazenado na memoria
+			new Word(Opcode.LDI, 1, -1, 11),     // 1   	Linha do salto do jump de 0
+			new Word(Opcode.LDI, 2, -1, 6),      // 2   	Linha do salto do jump do loop
+			new Word(Opcode.LDI, 3, -1, 1),      // 3   	Valor do inicio do Fatoral
+			new Word(Opcode.LDI, 4, -1, -1),     // 4   	Valor caso seja negativo
+			//Teste do Zero
+			new Word(Opcode.JMPIL, 1, 0, -1),    // 5   	Se R0 for menor que 0 salta pro fim
+			//LOOP do Fatorial
+			new Word(Opcode.MULT, 3, 0, -1),     // 6   	Multiplico o valor dele por ele mesmo
+			new Word(Opcode.SUBI, 0, -1, 1),     // 7   	Diminuo o valor do numero fatoral
+			new Word(Opcode.JMPIG, 0, 2, -1),    // 8   	coloca valor de r1 na posição 10
+			//FIM do progama para o Fatorial
+			new Word(Opcode.STD, 0, -1, 20),     // 9   	Armazeno na memoria o resultado do faotrial
+			new Word(Opcode.STOP, -1, -1, -1),  // 10   	Termina o progama
+			//FIM do programa para o Negativo
+			new Word(Opcode.STD, 4, -1, 20),     // 11   	Salvo -1 no inicio da memoria	
+			new Word(Opcode.STOP, -1, -1, -1) }; // 12   	Termina o progama			                                    
     }
 }
 
