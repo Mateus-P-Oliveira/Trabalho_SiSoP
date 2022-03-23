@@ -78,41 +78,70 @@ public class Sistema {
 				// EXECUTA INSTRUCAO NO ir
 					switch (ir.opc) { // para cada opcode, sua execução
 
-						case LDI: // Rd <- k
+
+						case LDI: // Rd ← k
+
 							reg[ir.r1] = ir.p;
 							pc++;
 							break;
 
-						case STD: // [A] <- Rs
+
+						case STD: // [A] ← Rs
 							    m[ir.p].opc = Opcode.DATA;
 							    m[ir.p].p = reg[ir.r1];
 							    pc++;
 						break;
 
-						case ADD: // Rd <- Rd + Rs
+
+
+						case LDD: // Rd <- [A] //Here
+						    //m[ir.p].opc = Opcode.DATA; //Leitura não precisa saber se é um dado
+							reg[ir.r1] = m[ir.p].p; //Ajustar para memoria
+							pc++;
+							break;
+						
+						case LDX: //Rd <- [Rs]   // Here
+							//m[reg[ir.r2]].opc = Opcode.DATA;   //Leitura não precisa saber o que é feito    
+							reg[ir.r1] = reg[ir.r2];  //Depois ver com o professor
+							pc++;
+							break;
+
+						case STX: // [Rd] ←Rs
+						    m[reg[ir.r1]].opc = Opcode.DATA;      
+						    m[reg[ir.r1]].p = reg[ir.r2];          
+							pc++;
+						break;
+
+						case ADD: // Rd ← Rd + Rs
+
 							reg[ir.r1] = reg[ir.r1] + reg[ir.r2];
 							pc++;
 							break;
 
-						case MULT: // Rd <- Rd * Rs
+
+						case MULT: // Rd ← Rd * Rs
+
 							reg[ir.r1] = reg[ir.r1] * reg[ir.r2];
 							// gera um overflow
 							// -->  LIGA INT  (1)
 							pc++;
 							break;
 
-						case ADDI: // Rd <- Rd + k
+
+						case ADDI: // Rd ← Rd + k
+
 							reg[ir.r1] = reg[ir.r1] + ir.p;
 							pc++;
 							break;
 
-						case STX: // [Rd] <-Rs
-							    m[reg[ir.r1]].opc = Opcode.DATA;      
-							    m[reg[ir.r1]].p = reg[ir.r2];          
-								pc++;
-							break;
 
-						case SUB: // Rd <- Rd - Rs
+						case SUBI: //Here
+							reg[ir.r1] = reg[ir.r1] + ir.p;
+							pc++;
+						break;
+
+						case SUB: // Rd ← Rd - Rs
+
 							reg[ir.r1] = reg[ir.r1] - reg[ir.r2];
 							pc++;
 							break;
@@ -122,6 +151,25 @@ public class Sistema {
 						     break;
 						
 						case JMPIG: // If Rc > 0 Then PC <- Rs Else PC <- PC +1
+
+						case JMPI: // Here
+								pc = ir.r1;
+						break;
+
+						case JMP: //  PC ← k
+								pc = ir.p;
+							 break;
+							 
+						case JMPIL: //HEre
+							if(reg[ir.r2] < 0){
+								pc = reg[ir.r1];
+							} else{
+								pc++;
+							}							
+							break;
+						
+						case JMPIG: // If Rc > 0 Then PC ← Rs Else PC ← PC +1
+
 							if (reg[ir.r2] > 0) {
 								pc = reg[ir.r1];
 							} else {
@@ -129,13 +177,21 @@ public class Sistema {
 							}
 							break;
 
-						case JMPIE: // If Rc = 0 Then PC <- Rs Else PC <- PC +1
+
+						case JMPIE: // If Rc = 0 Then PC ← Rs Else PC ← PC +1
+
 							if (reg[ir.r2] == 0) {
 								pc = reg[ir.r1];
 							} else {
 								pc++;
 							}
 							break;
+
+						
+						case JMPIM://Here
+							pc =  m[ir.p].p;
+						break;
+
 
 						case STOP: // por enquanto, para execucao
 							break;
@@ -244,11 +300,13 @@ public class Sistema {
     // ------------------- instancia e testa sistema
 	public static void main(String args[]) {
 		Sistema s = new Sistema();
+
 	    //s.roda(progs.fibonacci10);           // "progs" significa acesso/referencia ao programa em memoria secundaria
 		// s.roda(progs.progMinimo);
 		// s.roda(progs.fatorial);
 		s.roda(progs.PB);
 	}	
+
     // -------------------------------------------------------------------------------------------------------
     // --------------- TUDO ABAIXO DE MAIN É AUXILIAR PARA FUNCIONAMENTO DO SISTEMA - nao faz parte 
 
@@ -310,6 +368,7 @@ public class Sistema {
 			new Word(Opcode.JMP, -1, -1, 4),     // 7   	vai p posicao 4
 			new Word(Opcode.STD, 1, -1, 10),     // 8   	coloca valor de r1 na posição 10
 			new Word(Opcode.STOP, -1, -1, -1),    // 9   	stop
+
 			new Word(Opcode.DATA, -1, -1, -1) };  // 10   ao final o valor do fatorial estará na posição 10 da memória
 
 		public Word[] PB = new Word[]{
