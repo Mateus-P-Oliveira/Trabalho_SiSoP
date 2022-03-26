@@ -2,7 +2,7 @@
 // Prof. Fernando Dotti
 // Código fornecido como parte da solução do projeto de Sistemas Operacionais
 //
-// Fase 1 - máquina virtual (vide enunciado correspondente)
+// Fase 2 - máquina virtual (vide enunciado correspondente)
 //
 
 import java.util.*;
@@ -36,11 +36,18 @@ public class Sistema {
 		LDI, LDD, STD,LDX, STX, SWAP;        // movimentacao
 	}
 
+	public enum interrupt{ //interrupcoes da CPU
+		None, Overflow, InvalidOpcode, InvalidAdrress, Stop;
+	}
+
 	public class CPU {
 							// característica do processador: contexto da CPU ...
 		private int pc; 			// ... composto de program counter,
 		private Word ir; 			// instruction register,
 		private int[] reg;       	// registradores da CPU
+		
+		interrupt interrupcaoAtiva;
+		//private boolean[] interrup = new boolean[5]; // {__,1-Overflow,2-}
 
 		private Word[] m;   // CPU acessa MEMORIA, guarda referencia 'm' a ela. memoria nao muda. ee sempre a mesma.
 			
@@ -69,144 +76,160 @@ public class Sistema {
 			 System.out.print("           ");  dump(ir);
 		}
 
+		private void resetInterrupt() {
+			interrupcaoAtiva = interrupt.None;
+		}
+
 		public void run() { 		// execucao da CPU supoe que o contexto da CPU, vide acima, esta devidamente setado
-			while (true) { 			// ciclo de instrucoes. acaba cfe instrucao, veja cada caso.
-				// FETCH
-					ir = m[pc]; 	// busca posicao da memoria apontada por pc, guarda em ir
-					//if debug
-					    showState();
-				// EXECUTA INSTRUCAO NO ir
-					switch (ir.opc) { // para cada opcode, sua execução
+			boolean stateRun = true;
+			while (stateRun) { 			// ciclo de instrucoes. acaba cfe instrucao, veja cada caso.
+				try{
+					// FETCH
+						ir = m[pc]; 	// busca posicao da memoria apontada por pc, guarda em ir
+						//if debug
+							showState();
+					// EXECUTA INSTRUCAO NO ir
+						switch (ir.opc) { // para cada opcode, sua execução
 
 
-						case LDI: // Rd ← k
+							case LDI: // Rd ← k
 
-							reg[ir.r1] = ir.p;
-							pc++;
-							break;
-
-
-						case STD: // [A] ← Rs
-							    m[ir.p].opc = Opcode.DATA;
-							    m[ir.p].p = reg[ir.r1];
-							    pc++;
-						break;
-
-
-
-						case LDD: // Rd <- [A] //Here
-						    //m[ir.p].opc = Opcode.DATA; //Leitura não precisa saber se é um dado
-							reg[ir.r1] = m[ir.p].p; //Ajustar para memoria
-							pc++;
-							break;
-						
-						case LDX: //Rd <- [Rs]   // Here
-							//m[reg[ir.r2]].opc = Opcode.DATA;   //Leitura não precisa saber o que é feito    
-							reg[ir.r1] = reg[ir.r2];  //Depois ver com o professor
-							pc++;
-							break;
-
-						case STX: // [Rd] ←Rs
-						    m[reg[ir.r1]].opc = Opcode.DATA;      
-						    m[reg[ir.r1]].p = reg[ir.r2];          
-							pc++;
-						break;
-
-						case ADD: // Rd ← Rd + Rs
-
-							reg[ir.r1] = reg[ir.r1] + reg[ir.r2];
-							pc++;
-							break;
-
-
-						case MULT: // Rd ← Rd * Rs
-
-							reg[ir.r1] = reg[ir.r1] * reg[ir.r2];
-							// gera um overflow
-							// -->  LIGA INT  (1)
-							pc++;
-							break;
-
-
-						case ADDI: // Rd ← Rd + k
-
-							reg[ir.r1] = reg[ir.r1] + ir.p;
-							pc++;
-							break;
-
-
-						case SUBI: //Here
-							reg[ir.r1] = reg[ir.r1] + ir.p;
-							pc++;
-						break;
-
-						case SUB: // Rd ← Rd - Rs
-
-							reg[ir.r1] = reg[ir.r1] - reg[ir.r2];
-							pc++;
-							break;
-
-						case JMP: //  PC <- k
-								pc = ir.p;
-						     break;
-						
-						case JMPIG: // If Rc > 0 Then PC <- Rs Else PC <- PC +1
-
-						case JMPI: // Here
-								pc = ir.r1;
-						break;
-
-						case JMP: //  PC ← k
-								pc = ir.p;
-							 break;
-							 
-						case JMPIL: //HEre
-							if(reg[ir.r2] < 0){
-								pc = reg[ir.r1];
-							} else{
+								reg[ir.r1] = ir.p;
 								pc++;
-							}							
-							break;
-						
-						case JMPIG: // If Rc > 0 Then PC ← Rs Else PC ← PC +1
+								break;
 
-							if (reg[ir.r2] > 0) {
-								pc = reg[ir.r1];
-							} else {
+
+							case STD: // [A] ← Rs
+									m[ir.p].opc = Opcode.DATA;
+									m[ir.p].p = reg[ir.r1];
+									pc++;
+							break;
+
+
+
+							case LDD: // Rd <- [A] //Here
+								//m[ir.p].opc = Opcode.DATA; //Leitura não precisa saber se é um dado
+								reg[ir.r1] = m[ir.p].p; //Ajustar para memoria
 								pc++;
-							}
-							break;
-
-
-						case JMPIE: // If Rc = 0 Then PC ← Rs Else PC ← PC +1
-
-							if (reg[ir.r2] == 0) {
-								pc = reg[ir.r1];
-							} else {
+								break;
+							
+							case LDX: //Rd <- [Rs]   // Here
+								//m[reg[ir.r2]].opc = Opcode.DATA;   //Leitura não precisa saber o que é feito    
+								reg[ir.r1] = reg[ir.r2];  //Depois ver com o professor
 								pc++;
-							}
+								break;
+
+							case STX: // [Rd] ←Rs
+								m[reg[ir.r1]].opc = Opcode.DATA;      
+								m[reg[ir.r1]].p = reg[ir.r2];          
+								pc++;
 							break;
 
-						
-						case JMPIM://Here
-							pc =  m[ir.p].p;
-						break;
+							case ADD: // Rd ← Rd + Rs
+
+								reg[ir.r1] = reg[ir.r1] + reg[ir.r2];
+								pc++;
+								break;
 
 
-						case STOP: // por enquanto, para execucao
+							case MULT: // Rd ← Rd * Rs
+								try {
+									reg[ir.r1] = reg[ir.r1] * reg[ir.r2];
+									pc++;
+								} catch (Exception e) {
+									// gera um overflow
+									// -->  LIGA INT  (1)
+									interrupcaoAtiva = interrupt.Overflow;
+								}
+								
+								break;
+
+
+							case ADDI: // Rd ← Rd + k
+
+								reg[ir.r1] = reg[ir.r1] + ir.p;
+								pc++;
+								break;
+
+
+							case SUBI: //Here
+								reg[ir.r1] = reg[ir.r1] + ir.p;
+								pc++;
 							break;
-						default:
-						    // opcode desconhecido
-							// liga interrup (2)
+
+							case SUB: // Rd ← Rd - Rs
+
+								reg[ir.r1] = reg[ir.r1] - reg[ir.r2];
+								pc++;
+								break;
+
+							//case JMP: //  PC <- k
+							//		pc = ir.p;
+							//     break;
+							//
+							//case JMPIG: // If Rc > 0 Then PC <- Rs Else PC <- PC +1
+
+							case JMPI: // Here
+									pc = ir.r1;
+							break;
+
+							case JMP: //  PC ← k
+									pc = ir.p;
+								break;
+								
+							case JMPIL: //HEre
+								if(reg[ir.r2] < 0){
+									pc = reg[ir.r1];
+								} else{
+									pc++;
+								}							
+								break;
+							
+							case JMPIG: // If Rc > 0 Then PC ← Rs Else PC ← PC +1
+
+								if (reg[ir.r2] > 0) {
+									pc = reg[ir.r1];
+								} else {
+									pc++;
+								}
+								break;
+
+
+							case JMPIE: // If Rc = 0 Then PC ← Rs Else PC ← PC +1
+
+								if (reg[ir.r2] == 0) {
+									pc = reg[ir.r1];
+								} else {
+									pc++;
+								}
+								break;
+
+							
+							case JMPIM://Here
+								pc =  m[ir.p].p;
+							break;
+
+
+							case STOP: // por enquanto, para execucao
+								interrupcaoAtiva = interrupt.Stop;
+								break;
+							default:
+							    // opcode desconhecido
+								// liga interrup (2)
+								interrupcaoAtiva = interrupt.InvalidOpcode;
 					}
-				
-				// VERIFICA INTERRUPÇÃO !!! - TERCEIRA FASE DO CICLO DE INSTRUÇÕES
-				if (ir.opc==Opcode.STOP) {   
-					break; // break sai do loop da cpu
-
-			    // if int ligada - vai para tratamento da int 
-				//     desviar para rotina java que trata int
 				}
+				catch(ArrayIndexOutOfBoundsException e){ // execoes para acesso a elemento de memoria maior que o vetor
+					interrupcaoAtiva = interrupt.InvalidAdrress;
+				}
+				// VERIFICA INTERRUPÇÃO !!! - TERCEIRA FASE DO CICLO DE INSTRUÇÕES
+				 // if int ligada - vai para tratamento da int 
+				//     desviar para rotina java que trata int
+				if(interrupcaoAtiva!=interrupt.None){
+					trataTnterrupcoes(interrupcaoAtiva); //trata interrupcao
+					stateRun=false; // para execucao do loop while/programa
+				}
+				
 			}
 		}
 	}
@@ -259,7 +282,8 @@ public class Sistema {
 					m[i].opc = p[i].opc;     m[i].r1 = p[i].r1;     m[i].r2 = p[i].r2;     m[i].p = p[i].p;
 				}
 			}
-			public void executa() {          
+			public void executa() {      
+				vm.cpu.resetInterrupt(); 		//zera os interruptores
 				vm.cpu.setContext(0);          // monitor seta contexto - pc aponta para inicio do programa 
 				vm.cpu.run();                  //                         e cpu executa
 				                               // note aqui que o monitor espera que o programa carregado acabe normalmente
@@ -292,6 +316,13 @@ public class Sistema {
 			System.out.println("---------------------------------- após execucao ");
 			monitor.dump(vm.m, 0, programa.length);
 		}
+	public void trataTnterrupcoes(interrupt i){
+		System.out.println("I-N-T-E-R-R-U-P-T-I-O-N");
+		if(i==interrupt.InvalidAdrress) System.out.println("Acesso invalido a memoria"); 
+		if(i==interrupt.InvalidOpcode) System.out.println("Opcode invalido");
+		if(i==interrupt.Overflow) System.out.println("OverFlow");
+		if(i==interrupt.Stop) System.out.println("Fim da execucao do programa");   
+	}
 
     // -------------------  S I S T E M A - fim --------------------------------------------------------------
     // -------------------------------------------------------------------------------------------------------
