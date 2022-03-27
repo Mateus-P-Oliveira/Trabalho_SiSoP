@@ -101,18 +101,13 @@ public class Sistema {
 							    pc++;
 						break;
 
-            case LDI: // Rd <- k
+            			case LDI: // Rd <- k
 								reg[ir.r1] = ir.p;
 								pc++;
 								break;
 
 
-							case STD: // [A] ← Rs
-									m[ir.p].opc = Opcode.DATA;
-									m[ir.p].p = reg[ir.r1];
-									pc++;
-							break;
-
+							
 
 
 							case LDD: // Rd <- [A] //Here
