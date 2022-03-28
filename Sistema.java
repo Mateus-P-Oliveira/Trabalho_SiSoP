@@ -33,7 +33,8 @@ public class Sistema {
 		DATA, ___,		    // se memoria nesta posicao tem um dado, usa DATA, se nao usada ee NULO ___
 		JMP, JMPI, JMPIG, JMPIL, JMPIE,  JMPIM, JMPIGM, JMPILM, JMPIEM, STOP,   // desvios e parada
 		ADDI, SUBI,  ADD, SUB, MULT,         // matematicos
-		LDI, LDD, STD,LDX, STX, SWAP;        // movimentacao
+		LDI, LDD, STD,LDX, STX, SWAP,        // movimentacao
+		TRAP;
 	}
 
 	public enum interrupt{ //interrupcoes da CPU
@@ -53,7 +54,7 @@ public class Sistema {
 			
 		public CPU(Word[] _m) {     // ref a MEMORIA e interrupt handler passada na criacao da CPU
 			m = _m; 				// usa o atributo 'm' para acessar a memoria.
-			reg = new int[8]; 		// aloca o espaço dos registradores
+			reg = new int[10]; 		// aloca o espaço dos registradores
 		}
 
 		public void setContext(int _pc) {  // no futuro esta funcao vai ter que ser 
@@ -208,7 +209,24 @@ public class Sistema {
 							case JMPIM://Here
 								pc =  m[ir.p].p;
 							break;
+								
+							case TRAP:
+								if (reg[8] == 1){ //Verificado o valor dentro do registrador 8 || TRAP = 1 -> chamada de IN
+									Scanner myObj = new Scanner(System.in); // instancia leituras do java
+									System.out.print("Input integer: ");
+									String inputUser = myObj.nextLine(); //le o numero do usuario
+									m[reg[9]].p = Integer.parseInt(inputUser); // conforme a entrada e salva na posição da memoria 
+									//Conforme exemplo do professor
+									//|| reg[9] (obtem o valor dentro do registrador) =4, entao, m[4], logo m[4] <- input 
+								}
 
+								if (reg[8] == 2){ //TRAP = 2 -> chamada de OUT
+									int output = m[reg[9]].p; //reg[9]=10, logo, m[10] || output <- m[10]
+									System.out.println(output);
+									//?? forma flexíveL, verificar ultima especificacao da Fase3
+								}
+								
+								break;
 
 							case STOP: // por enquanto, para execucao
 								interrupcaoAtiva = interrupt.Stop;
