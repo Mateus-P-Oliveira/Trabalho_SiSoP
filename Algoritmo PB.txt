@@ -8,12 +8,13 @@ LDI		4	-1	-1	4		#Valor caso seja negativo
 #Teste do Zero
 JMPIL		1	 0 	-1	5		#Se R0 for menor que 0 salta pro fim
 #LOOP do Fatorial
-MULT		3	0	-1	6		#Multiplico o valor dele por ele mesmo
-SUBI		0	-1	 1 	7		#Diminuo o valor do numero fatoral
-JMPGE		2	0	 -1	8		#Pulo para o inicio do Loop  //Insrução Criada
+JMPIE   2 0 -1  6
+MULT		3	0	-1	7		#Multiplico o valor dele por ele mesmo
+SUBI		0	-1	 1 	8		#Diminuo o valor do numero fatoral
+JMPGE		2	0	 -1	9		#Pulo para o inicio do Loop  //Insrução Criada
 #FIM do progama para o Fatoral
-STD		3	-1	 20	9		#Armazeno na memoria o resultado do faotrial
-STOP   		-1	-1	-1	10		#Termina o progama
+STD		3	-1	 20	10		#Armazeno na memoria o resultado do faotrial
+STOP   		-1	-1	-1	11		#Termina o progama
 #FIM do programa para o Negativo
-STD		4	-1	 20	11		#Salvo -1 no inicio da memoria	
-STOP   		-1	-1	-1	12		#Termina o progama
+STD		4	-1	 20	12		#Salvo -1 no inicio da memoria	
+STOP   		-1	-1	-1	13		#Termina o progama
