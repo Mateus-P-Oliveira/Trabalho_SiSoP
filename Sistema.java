@@ -165,7 +165,7 @@ public class Sistema {
 							break;											 
 								
          		case SUBI: //Here
-								reg[ir.r1] = reg[ir.r1] + ir.p;
+								reg[ir.r1] = reg[ir.r1] - ir.p;
 								pc++;
 							break;				
 
@@ -447,13 +447,12 @@ public class Sistema {
 			//LOOP do Fatorial
 			new Word(Opcode.MULT, 3, 0, -1),     // 6   	Multiplico o valor dele por ele mesmo
 			new Word(Opcode.SUBI, 0, -1, 1),     // 7   	Diminuo o valor do numero fatoral
-			new Word(Opcode.JMPGE, 0, 2, -1),    // 8   	coloca valor de r1 na posição 10
+			new Word(Opcode.JMPGE, 2, 0, -1),    // 8   	coloca valor de r1 na posição 10
 			//FIM do progama para o Fatorial
-			new Word(Opcode.STD, 0, -1, 20),     // 9   	Armazeno na memoria o resultado do faotrial
+			new Word(Opcode.STD, 3, -1, 20),     // 9   	Armazeno na memoria o resultado do faotrial
 			new Word(Opcode.STOP, -1, -1, -1),  // 10   	Termina o progama
 			//FIM do programa para o Negativo
 			new Word(Opcode.STD, 4, -1, 20),     // 11   	Salvo -1 no inicio da memoria	
 			new Word(Opcode.STOP, -1, -1, -1) }; // 12   	Termina o progama			                                    
     }
-}
 
