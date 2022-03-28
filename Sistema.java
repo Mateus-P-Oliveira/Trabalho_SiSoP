@@ -2,7 +2,7 @@
 // Prof. Fernando Dotti
 // Código fornecido como parte da solução do projeto de Sistemas Operacionais
 //
-// Fase 2 - máquina virtual (vide enunciado correspondente)
+// Fase 3 - máquina virtual (vide enunciado correspondente)
 //
 
 import java.util.*;
