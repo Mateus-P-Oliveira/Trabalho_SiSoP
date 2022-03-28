@@ -31,7 +31,7 @@ public class Sistema {
 
 	public enum Opcode {
 		DATA, ___,		    // se memoria nesta posicao tem um dado, usa DATA, se nao usada ee NULO ___
-		JMP, JMPI, JMPIG, JMPIL, JMPIE,  JMPIM, JMPIGM, JMPILM, JMPIEM, STOP,   // desvios e parada
+		JMP, JMPI, JMPIG, JMPIL, JMPIE,  JMPIM, JMPIGM, JMPILM, JMPIEM, STOP, JMPGE,   // desvios e parada
 		ADDI, SUBI,  ADD, SUB, MULT,         // matematicos
 		LDI, LDD, STD,LDX, STX, SWAP,        // movimentacao
 		TRAP;
@@ -77,9 +77,11 @@ public class Sistema {
 			 System.out.print("           ");  dump(ir);
 		}
 
+
 		private void resetInterrupt() {
 			interrupcaoAtiva = interrupt.None;
 		}
+
 
 		public void run() { 		// execucao da CPU supoe que o contexto da CPU, vide acima, esta devidamente setado
 			boolean stateRun = true;
@@ -93,19 +95,20 @@ public class Sistema {
 						switch (ir.opc) { // para cada opcode, sua execução
 
 
-							case LDI: // Rd ← k
 
+						case STD: // [A] <- Rs
+							    m[ir.p].opc = Opcode.DATA;
+							    m[ir.p].p = reg[ir.r1];
+							    pc++;
+						break;
+
+            			case LDI: // Rd <- k
 								reg[ir.r1] = ir.p;
 								pc++;
 								break;
 
 
-							case STD: // [A] ← Rs
-									m[ir.p].opc = Opcode.DATA;
-									m[ir.p].p = reg[ir.r1];
-									pc++;
-							break;
-
+							
 
 
 							case LDD: // Rd <- [A] //Here
@@ -120,17 +123,22 @@ public class Sistema {
 								pc++;
 								break;
 
+
 							case STX: // [Rd] ←Rs
 								m[reg[ir.r1]].opc = Opcode.DATA;      
 								m[reg[ir.r1]].p = reg[ir.r2];          
 								pc++;
 							break;
 
-							case ADD: // Rd ← Rd + Rs
+							
 
+
+               case ADD: // Rd ← Rd + Rs
 								reg[ir.r1] = reg[ir.r1] + reg[ir.r2];
 								pc++;
 								break;
+					
+
 
 
 							case MULT: // Rd ← Rd * Rs
@@ -145,30 +153,22 @@ public class Sistema {
 								
 								break;
 
-
-							case ADDI: // Rd ← Rd + k
+            	case ADDI: // Rd ← Rd + k
 
 								reg[ir.r1] = reg[ir.r1] + ir.p;
 								pc++;
 								break;
 
+						case SUB: // Rd <- Rd - Rs
 
-							case SUBI: //Here
+							reg[ir.r1] = reg[ir.r1] - reg[ir.r2];
+							pc++;
+							break;											 
+								
+         		case SUBI: //Here
 								reg[ir.r1] = reg[ir.r1] + ir.p;
 								pc++;
-							break;
-
-							case SUB: // Rd ← Rd - Rs
-
-								reg[ir.r1] = reg[ir.r1] - reg[ir.r2];
-								pc++;
-								break;
-
-							//case JMP: //  PC <- k
-							//		pc = ir.p;
-							//     break;
-							//
-							//case JMPIG: // If Rc > 0 Then PC <- Rs Else PC <- PC +1
+							break;				
 
 							case JMPI: // Here
 									pc = ir.r1;
@@ -208,9 +208,44 @@ public class Sistema {
 							
 							case JMPIM://Here
 								pc =  m[ir.p].p;
-							break;
-								
+
+
+						case JMPIGM: //if Rc > 0 then PC <- [A] Else PC <- PC +1 // Here
+						if (reg[ir.r2] > 0) {
+							pc = m[ir.p].p;
+						} else {
+							pc++;
+						}
+						break;
+
+						case JMPILM: // if Rc < 0 then PC <- [A]		Else PC <- PC +1 //Here
+						if(reg[ir.r2] < 0){
+							pc = m[ir.p].p;
+						} else{
+							pc++;
+						}							
+						break;
+
+						case JMPIEM: // if Rc = 0 then PC <- [A]  Else PC <- PC +1
+						if (reg[ir.r2] == 0) {
+							pc = m[ir.p].p;
+						} else {
+							pc++;
+						}
+						break;
+
+						case JMPGE: //Jump Greater Equal Adicionar no pdf
+						if (reg[ir.r2] >= 0) {
+							pc = reg[ir.r1];
+						} else {
+							pc++;
+						}
+						break;
+
+							
+
 							case TRAP:
+
 								if (reg[8] == 1){ //Verificado o valor dentro do registrador 8 || TRAP = 1 -> chamada de IN
 									Scanner myObj = new Scanner(System.in); // instancia leituras do java
 									System.out.print("Input integer: ");
@@ -224,8 +259,7 @@ public class Sistema {
 									int output = m[reg[9]].p; //reg[9]=10, logo, m[10] || output <- m[10]
 									System.out.println(output);
 									//?? forma flexíveL, verificar ultima especificacao da Fase3
-								}
-								
+								}								
 								break;
 
 							case STOP: // por enquanto, para execucao
@@ -329,10 +363,10 @@ public class Sistema {
 	public void roda(Word[] programa){
 			monitor.carga(programa, vm.m);    
 			System.out.println("---------------------------------- programa carregado ");
-			monitor.dump(vm.m, 0, programa.length);
+			monitor.dump(vm.m, 0, 90); //Muda o total do Dump
 			monitor.executa();        
 			System.out.println("---------------------------------- após execucao ");
-			monitor.dump(vm.m, 0, programa.length);
+			monitor.dump(vm.m, 0, 90); //Muda o total do Dump
 		}
 	public void trataTnterrupcoes(interrupt i){
 		System.out.println("I-N-T-E-R-R-U-P-T-I-O-N");
@@ -361,7 +395,7 @@ public class Sistema {
 
    //  -------------------------------------------- programas aa disposicao para copiar na memoria (vide carga)
    public class Programas {
-	   public Word[] progMinimo = new Word[] {
+	  /* public Word[] progMinimo = new Word[] {
 		    //       OPCODE      R1  R2  P         :: VEJA AS COLUNAS VERMELHAS DA TABELA DE DEFINICAO DE OPERACOES
 			//                                     :: -1 SIGNIFICA QUE O PARAMETRO NAO EXISTE PARA A OPERACAO DEFINIDA
 		    new Word(Opcode.LDI, 0, -1, 999), 		
@@ -418,11 +452,11 @@ public class Sistema {
 			new Word(Opcode.STD, 1, -1, 10),     // 8   	coloca valor de r1 na posição 10
 			new Word(Opcode.STOP, -1, -1, -1),    // 9   	stop
 
-			new Word(Opcode.DATA, -1, -1, -1) };  // 10   ao final o valor do fatorial estará na posição 10 da memória
+			new Word(Opcode.DATA, -1, -1, -1) };  // 10   ao final o valor do fatorial estará na posição 10 da memória*/
 
 		public Word[] PB = new Word[]{
 
-			new Word(Opcode.LDI, 0, -1, -6),      // 0   	Valor armazenado na memoria
+			new Word(Opcode.LDI, 0, -1, 4),      // 0   	Valor armazenado na memoria
 			new Word(Opcode.LDI, 1, -1, 11),     // 1   	Linha do salto do jump de 0
 			new Word(Opcode.LDI, 2, -1, 6),      // 2   	Linha do salto do jump do loop
 			new Word(Opcode.LDI, 3, -1, 1),      // 3   	Valor do inicio do Fatoral
@@ -432,7 +466,7 @@ public class Sistema {
 			//LOOP do Fatorial
 			new Word(Opcode.MULT, 3, 0, -1),     // 6   	Multiplico o valor dele por ele mesmo
 			new Word(Opcode.SUBI, 0, -1, 1),     // 7   	Diminuo o valor do numero fatoral
-			new Word(Opcode.JMPIG, 0, 2, -1),    // 8   	coloca valor de r1 na posição 10
+			new Word(Opcode.JMPGE, 0, 2, -1),    // 8   	coloca valor de r1 na posição 10
 			//FIM do progama para o Fatorial
 			new Word(Opcode.STD, 0, -1, 20),     // 9   	Armazeno na memoria o resultado do faotrial
 			new Word(Opcode.STOP, -1, -1, -1),  // 10   	Termina o progama
