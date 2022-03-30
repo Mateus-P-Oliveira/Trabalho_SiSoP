@@ -369,6 +369,8 @@ public class Sistema {
 		// s.roda(progs.progMinimo);
 		// s.roda(progs.fatorial);
 		s.roda(progs.PB);
+		//s.roda(progs.PA);
+		//s.roda(progs.PC);
 	}	
 
     // -------------------------------------------------------------------------------------------------------
@@ -456,5 +458,78 @@ public class Sistema {
 			//FIM do programa para o Negativo
 			new Word(Opcode.STD, 4, -1, 20),     // 13   	Salvo -1 no inicio da memoria	
 			new Word(Opcode.STOP, -1, -1, -1) }; // 14   	Termina o progama			                                    
-    }
-}
+	}
+	
+		public Word[] PA = new Word[]{
+
+		new Word(Opcode.LDI, 0, -1, 4),
+		new Word(Opcode.LDI, 1, -1, 15), 
+		new Word(Opcode.LDI, 2, -1, -1), 
+		new Word(Opcode.LDI, 3, -1, 14), 
+		new Word(Opcode.LDI, 4, -1, 1), 
+		new Word(Opcode.LDI, 5, -1, 20),
+		//JMP para testar o zero
+		new Word(Opcode.JMPIL, 1, 0, -1),
+		//Loop Fibonacci
+		new Word(Opcode.JMPIE, 3, 0, -1),
+		new Word(Opcode.STX, 5, 4, -1),
+		new Word(Opcode.ADDI, 5, -1, 1),
+		new Word(Opcode.LDX, 6, 4, -1),
+		new Word(Opcode.ADD, 4, 6, -1),
+		new Word(Opcode.SUBI, 0, -1, 1),
+		new Word(Opcode.JMP, -1, -1, 7),
+		//Fim do programa caso tenha tido sequencia
+		new Word(Opcode.STOP, -1, -1, -1),
+		//Fim do programa caso tenha sido um zero
+		new Word(Opcode.STD, 2, -1, 20),
+		new Word(Opcode.STOP, -1, -1, -1)                         
+		};
+
+		public Word[] PC =new Word[]{
+			new Word(Opcode.LDI, 0, -1, 31),
+			new Word(Opcode.LDI, 1, -1, 32),
+			new Word(Opcode.LDI, 2, -1, 40),
+			new Word(Opcode.LDI, 3, -1, 41),
+			new Word(Opcode.LDI, 4, -1, 48),
+			//coloca elementos no vetor
+			new Word(Opcode.LDI, 4, -1, 8),
+			new Word(Opcode.STD, 4, -1, 40),
+			new Word(Opcode.LDI, 4, -1, 7),
+			new Word(Opcode.STD, 4, -1, 41),
+			new Word(Opcode.LDI, 4, -1, 6),
+			new Word(Opcode.STD, 4, -1, 42),
+			new Word(Opcode.LDI, 4, -1, 5),
+			new Word(Opcode.STD, 4, -1, 43),
+			new Word(Opcode.LDI, 4, -1, 4),
+			new Word(Opcode.STD, 4, -1, 44),
+			new Word(Opcode.LDI, 4, -1, 3),
+			new Word(Opcode.STD, 4, -1, 45),
+			new Word(Opcode.LDI, 4, -1, 2),
+			new Word(Opcode.STD, 4, -1, 46),
+			new Word(Opcode.LDI, 4, -1, 1),
+			new Word(Opcode.STD, 4, -1, 47),
+			//Faz o bubble sort do Algoritmo
+			new Word(Opcode.JMPIL, 6, 0, -1),
+			new Word(Opcode.LDX, 5, -1, 2),
+			new Word(Opcode.LDX, 6, -1, 3),
+			new Word(Opcode.STD, 6, -1, 48),
+			new Word(Opcode.SUB, 5, 5, -1),
+			new Word(Opcode.JMPIL, 6, 1, -1),
+			new Word(Opcode.LDX, 6, -1, 7),
+			new Word(Opcode.ADDI, 2, -1, 1),
+			new Word(Opcode.ADDI, 3, -1, 1),
+			new Word(Opcode.JMP, -1, -1, 21),
+			//Para o progama
+			new Word(Opcode.STOP, -1, -1, -1),
+			//Faz o swap
+			new Word(Opcode.LDX, 6, -1, 7),
+			new Word(Opcode.STX, 2, 6, -1),
+			new Word(Opcode.STX, 3, 5, -1),
+			new Word(Opcode.ADDI, 2, -1, 1),
+			new Word(Opcode.ADDI, 3, -1, 1),
+			new Word(Opcode.JMP, -1, -1, 21),
+			//Stop caso de problema no jump
+			new Word(Opcode.STOP, -1, -1, -1)
+		};
+	}
+
