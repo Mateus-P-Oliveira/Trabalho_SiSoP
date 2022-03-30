@@ -403,8 +403,8 @@ public class Sistema {
 		//s.roda(progs.testInvalidAdrress);
 		//s.roda(progs.testIN);
 		//s.roda(progs.testOUT);
-		s.roda(progs.PB);
-		//s.roda(progs.PA);
+		//s.roda(progs.PB);
+		s.roda(progs.PA);
 		//s.roda(progs.PC);
 
 	}	
@@ -494,7 +494,7 @@ public class Sistema {
 			//FIM do programa para o Negativo
 			new Word(Opcode.STD, 4, -1, 20),     // 13   	Salvo -1 no inicio da memoria	
       new Word(Opcode.STOP, -1, -1, -1) }; // 14   	Termina o progama	
-     }
+     
 			
 			
 		public Word[] testOverFlow = new Word[]{
@@ -601,6 +601,9 @@ public class Sistema {
 			//Stop caso de problema no jump
 			new Word(Opcode.STOP, -1, -1, -1)
 		};
+		
 	}
+}
+
 
 
