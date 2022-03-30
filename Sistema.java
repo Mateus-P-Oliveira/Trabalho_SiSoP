@@ -2,7 +2,7 @@
 // Prof. Fernando Dotti
 // Código fornecido como parte da solução do projeto de Sistemas Operacionais
 //
-// Fase 2 - máquina virtual (vide enunciado correspondente)
+// Fase 3 - máquina virtual (vide enunciado correspondente)
 //
 
 import java.util.*;
@@ -33,7 +33,8 @@ public class Sistema {
 		DATA, ___,		    // se memoria nesta posicao tem um dado, usa DATA, se nao usada ee NULO ___
 		JMP, JMPI, JMPIG, JMPIL, JMPIE,  JMPIM, JMPIGM, JMPILM, JMPIEM, STOP, JMPGE,   // desvios e parada
 		ADDI, SUBI,  ADD, SUB, MULT,         // matematicos
-		LDI, LDD, STD,LDX, STX, SWAP;        // movimentacao
+		LDI, LDD, STD,LDX, STX, SWAP,        // movimentacao
+		TRAP;
 	}
 
 	public enum interrupt{ //interrupcoes da CPU
@@ -53,7 +54,7 @@ public class Sistema {
 			
 		public CPU(Word[] _m) {     // ref a MEMORIA e interrupt handler passada na criacao da CPU
 			m = _m; 				// usa o atributo 'm' para acessar a memoria.
-			reg = new int[8]; 		// aloca o espaço dos registradores
+			reg = new int[10]; 		// aloca o espaço dos registradores
 		}
 
 		public void setContext(int _pc) {  // no futuro esta funcao vai ter que ser 
@@ -71,7 +72,7 @@ public class Sistema {
         private void showState(){
 			 System.out.println("       "+ pc); 
 			   System.out.print("           ");
-			 for (int i=0; i<8; i++) { System.out.print("r"+i);   System.out.print(": "+reg[i]+"     "); };  
+			 for (int i=0; i<reg.length; i++) { System.out.print("r"+i);   System.out.print(": "+reg[i]+"     "); };  
 			 System.out.println("");
 			 System.out.print("           ");  dump(ir);
 		}
@@ -141,8 +142,14 @@ public class Sistema {
 
 
 							case MULT: // Rd ← Rd * Rs
+								
 								try {
-									reg[ir.r1] = reg[ir.r1] * reg[ir.r2];
+									long tmp = (long) reg[ir.r1] * (long) reg[ir.r2];
+									if(tmp >= Integer.MAX_VALUE){
+										throw new Exception("Erro de multiplicacao");
+									}else{
+										reg[ir.r1] = reg[ir.r1] * reg[ir.r2];
+									}
 									pc++;
 								} catch (Exception e) {
 									// gera um overflow
@@ -208,6 +215,7 @@ public class Sistema {
 							case JMPIM://Here
 								pc =  m[ir.p].p;
 
+
 						case JMPIGM: //if Rc > 0 then PC <- [A] Else PC <- PC +1 // Here
 						if (reg[ir.r2] > 0) {
 							pc = m[ir.p].p;
@@ -242,6 +250,25 @@ public class Sistema {
 
 							
 
+							case TRAP:
+
+								if (reg[8] == 1){ //Verificado o valor dentro do registrador 8 || TRAP = 1 -> chamada de IN
+									Scanner myObj = new Scanner(System.in); // instancia leituras do java
+									System.out.print("Input integer: ");
+									String inputUser = myObj.nextLine(); //le o numero do usuario
+									m[reg[9]].p = Integer.parseInt(inputUser); // conforme a entrada e salva na posição da memoria 
+									m[reg[9]].opc = Opcode.DATA;
+									//Conforme exemplo do professor
+									//|| reg[9] (obtem o valor dentro do registrador) =4, entao, m[4], logo m[4] <- input 
+								}
+
+								if (reg[8] == 2){ //TRAP = 2 -> chamada de OUT
+									int output = m[reg[9]].p; //reg[9]=10, logo, m[10] || output <- m[10]
+									System.out.println(output);
+									//?? forma flexíveL, verificar ultima especificacao da Fase3
+								}
+								pc++;								
+								break;
 
 							case STOP: // por enquanto, para execucao
 								interrupcaoAtiva = interrupt.Stop;
@@ -349,6 +376,7 @@ public class Sistema {
 			System.out.println("---------------------------------- após execucao ");
 			monitor.dump(vm.m, 0, 90); //Muda o total do Dump
 		}
+
 	public void trataTnterrupcoes(interrupt i){
 		System.out.println("I-N-T-E-R-R-U-P-T-I-O-N");
 		if(i==interrupt.InvalidAdrress) System.out.println("Acesso invalido a memoria"); 
@@ -368,9 +396,17 @@ public class Sistema {
 	    //s.roda(progs.fibonacci10);           // "progs" significa acesso/referencia ao programa em memoria secundaria
 		// s.roda(progs.progMinimo);
 		// s.roda(progs.fatorial);
+
+		//s.roda(progs.PB);
+		//s.roda(progs.testOverFlow);
+		//s.roda(progs.testInvalidOpcode);
+		//s.roda(progs.testInvalidAdrress);
+		//s.roda(progs.testIN);
+		s.roda(progs.testOUT);
 		s.roda(progs.PB);
 		//s.roda(progs.PA);
 		//s.roda(progs.PC);
+
 	}	
 
     // -------------------------------------------------------------------------------------------------------
@@ -457,8 +493,42 @@ public class Sistema {
 			new Word(Opcode.STOP, -1, -1, -1),  // 12	  	Termina o progama
 			//FIM do programa para o Negativo
 			new Word(Opcode.STD, 4, -1, 20),     // 13   	Salvo -1 no inicio da memoria	
-			new Word(Opcode.STOP, -1, -1, -1) }; // 14   	Termina o progama			                                    
-	}
+      new Word(Opcode.STOP, -1, -1, -1) }; // 14   	Termina o progama	
+     }
+			
+			
+		public Word[] testOverFlow = new Word[]{
+			new Word(Opcode.LDI, 0, -1, 2147483647),      // 0   	Valor armazenado na memoria
+			new Word(Opcode.LDI, 1, -1, 2147483647),     // 1   	Valor armazenado na memoria
+			new Word(Opcode.MULT, 0, 1, -1)      // 2   	aplica multiplicacao (forcando overflow)
+		};
+
+		public Word[] testInvalidOpcode = new Word[]{
+			new Word(Opcode.DATA, -1, -1, -1),      // 0   	DATA nao e opcode de CPU
+		};
+
+		public Word[] testInvalidAdrress = new Word[]{
+			new Word(Opcode.STD, 0, -1, 2048),      // 0   	2048 Endereco invalido (Ex de max 1024)
+		};
+
+		public Word[] testIN = new Word[]{
+			new Word(Opcode.LDI, 8, -1, 1),     	 // 0   	DATA nao e opcode de CPU
+			new Word(Opcode.LDI, 9, -1, 4),     	 // 0   	DATA nao e opcode de CPU
+			new Word(Opcode.TRAP, -1, -1, -1),      // 0   	DATA nao e opcode de CPU
+			new Word(Opcode.STOP, -1, -1, -1),      // 0   	DATA nao e opcode de CPU
+		};
+		public Word[] testOUT = new Word[]{
+			new Word(Opcode.LDI, 0, -1, 12345),      // 0   	DATA nao e opcode de CPU
+			new Word(Opcode.STD, 0, -1, 10),     	 // 0   	DATA nao e opcode de CPU
+			new Word(Opcode.LDI, 8, -1, 2),     	 // 0   	DATA nao e opcode de CPU
+			new Word(Opcode.LDI, 9, -1, 10),     	 // 0   	DATA nao e opcode de CPU
+			new Word(Opcode.TRAP, -1, -1, -1), 
+			new Word(Opcode.STOP, -1, -1, -1),      // 0   	DATA nao e opcode de CPU
+		}; 
+
+
+			                                
+	
 	
 		public Word[] PA = new Word[]{
 
@@ -532,4 +602,5 @@ public class Sistema {
 			new Word(Opcode.STOP, -1, -1, -1)
 		};
 	}
+
 
