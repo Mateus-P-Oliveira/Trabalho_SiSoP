@@ -6,6 +6,7 @@ LDI		2 	-1	-1                       #Valor Negativo para ser armazenado				2
 LDI		3	-1	14                      #LINHA DE SALTO DO STOP						3
 LDI		4	-1	1	#Carrega o inicio do Fibonacci							4
 LDI		5	-1	20      #Carrego o primeiro valor da memoria que ira armazenar a memoria de Fibo	5		
+LDI   7 -1   0      #Carrego o valor previo da soma de Fibonacci
 #JMP PARA TESTAR O ZERO
 JMPIL		1	0	-1 #Se o R0 for menor que 0 salta para onde ta o stop					6
 #LOOP DE FIBONACCI						
