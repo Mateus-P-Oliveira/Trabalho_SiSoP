@@ -512,18 +512,18 @@ public class Sistema {
 		};
 
 		public Word[] testIN = new Word[]{
-			new Word(Opcode.LDI, 8, -1, 1),     	 // 0   	DATA nao e opcode de CPU
-			new Word(Opcode.LDI, 9, -1, 4),     	 // 0   	DATA nao e opcode de CPU
-			new Word(Opcode.TRAP, -1, -1, -1),      // 0   	DATA nao e opcode de CPU
-			new Word(Opcode.STOP, -1, -1, -1),      // 0   	DATA nao e opcode de CPU
+			new Word(Opcode.LDI, 8, -1, 1),     	 
+			new Word(Opcode.LDI, 9, -1, 4),     	 
+			new Word(Opcode.TRAP, -1, -1, -1),      
+			new Word(Opcode.STOP, -1, -1, -1),      
 		};
 		public Word[] testOUT = new Word[]{
-			new Word(Opcode.LDI, 0, -1, 12345),      // 0   	DATA nao e opcode de CPU
-			new Word(Opcode.STD, 0, -1, 10),     	 // 0   	DATA nao e opcode de CPU
-			new Word(Opcode.LDI, 8, -1, 2),     	 // 0   	DATA nao e opcode de CPU
-			new Word(Opcode.LDI, 9, -1, 10),     	 // 0   	DATA nao e opcode de CPU
+			new Word(Opcode.LDI, 0, -1, 12345),      
+			new Word(Opcode.STD, 0, -1, 10),     	 
+			new Word(Opcode.LDI, 8, -1, 2),     	 
+			new Word(Opcode.LDI, 9, -1, 10),     	 
 			new Word(Opcode.TRAP, -1, -1, -1), 
-			new Word(Opcode.STOP, -1, -1, -1),      // 0   	DATA nao e opcode de CPU
+			new Word(Opcode.STOP, -1, -1, -1),      
 		}; 
 
 
