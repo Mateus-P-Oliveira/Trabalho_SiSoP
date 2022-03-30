@@ -402,7 +402,7 @@ public class Sistema {
 		//s.roda(progs.testInvalidOpcode);
 		//s.roda(progs.testInvalidAdrress);
 		//s.roda(progs.testIN);
-		s.roda(progs.testOUT);
+		//s.roda(progs.testOUT);
 		s.roda(progs.PB);
 		//s.roda(progs.PA);
 		//s.roda(progs.PC);
