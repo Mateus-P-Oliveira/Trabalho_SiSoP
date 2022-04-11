@@ -299,19 +299,32 @@ public class Sistema {
 	
     // ------------------- V M  - constituida de CPU e MEMORIA -----------------------------------------------
     // -------------------------- atributos e construcao da VM -----------------------------------------------
-	public class VM {
-		public int tamMem;    
+	public class VM {//Mudar aqui para implementar o Gerenciador de Memoria 
+		public int tamMem, tamPag, tamFrame, nroFrames;   
         public Word[] m;     
-        public CPU cpu;    
+        public CPU cpu;	
+	
 
-        public VM(){    
+        /*public VM(){    
 	     // memória
   		 	 tamMem = 1024;
 			 m = new Word[tamMem]; // m ee a memoria
 			 for (int i=0; i<tamMem; i++) { m[i] = new Word(Opcode.___,-1,-1,-1); };
 	  	 // cpu
 			 cpu = new CPU(m);   // cpu acessa memória
-	    }	
+	    }*/
+		
+		public VM(){ //Implementação da GM
+			//memória
+			tamMem = 1024;
+			tamPag = 16;
+			tamFrame = tamPag;
+			nroFrames = tamMem / tamPag;
+			int[]  mem = new int[tamMem];
+			//cpu
+			cpu = new CPU(m);
+			
+		}
 	}
     // ------------------- V M  - fim ------------------------------------------------------------------------
 	// -------------------------------------------------------------------------------------------------------
