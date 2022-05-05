@@ -3,7 +3,7 @@
 // Código fornecido como parte da solução do projeto de Sistemas Operacionais
 //
 // Fase 3 - máquina virtual (vide enunciado correspondente)
-//
+//Teste de commit
 
 import java.util.*;
 public class Sistema {
