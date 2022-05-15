@@ -66,7 +66,9 @@ public class Sistema {
 			reg = new int[10]; // aloca o espaço dos registradores
 		}
 
-		public void setContext(int _pc, GM.tabelaPaginaProcesso pagesProcess) { // no futuro esta funcao vai ter que ser /// incremenado tabelaPagina do processo para o contexto
+		public void setContext(int _pc, GM.tabelaPaginaProcesso pagesProcess) { // no futuro esta funcao vai ter que ser
+																				// /// incremenado tabelaPagina do
+																				// processo para o contexto
 			pc = _pc; // limite e pc (deve ser zero nesta versao)
 			this.pagesProcess = pagesProcess;
 		}
@@ -115,7 +117,7 @@ public class Sistema {
 					switch (ir.opc) { // para cada opcode, sua execução
 
 						case STD: // [A] <- Rs
-							addressT = vm.gm.translate(ir.p, pagesProcess); //address assume o valor traduzido de ir.p
+							addressT = vm.gm.translate(ir.p, pagesProcess); // address assume o valor traduzido de ir.p
 							m[addressT].opc = Opcode.DATA;
 							m[addressT].p = reg[ir.r1];
 							pc++;
@@ -128,7 +130,8 @@ public class Sistema {
 
 						case LDD: // Rd <- [A] //Here
 							// m[ir.p].opc = Opcode.DATA; //Leitura não precisa saber se é um dado
-							addressT = vm.gm.translate(ir.r1, pagesProcess); //address assume o valor traduzido de ir.r1
+							addressT = vm.gm.translate(ir.r1, pagesProcess); // address assume o valor traduzido de
+																				// ir.r1
 							addressT_2 = vm.gm.translate(ir.p, pagesProcess);
 							reg[addressT] = m[addressT_2].p; // Ajustar para memoria
 							pc++;
@@ -270,7 +273,7 @@ public class Sistema {
 
 								addressT = vm.gm.translate(reg[9], pagesProcess);
 								m[addressT].p = Integer.parseInt(inputUser); // conforme a entrada e salva na posição da
-																			// memoria
+																				// memoria
 								m[addressT].opc = Opcode.DATA;
 								// Conforme exemplo do professor
 								// || reg[9] (obtem o valor dentro do registrador) =4, entao, m[4], logo m[4] <-
@@ -295,7 +298,7 @@ public class Sistema {
 							interrupcaoAtiva = interrupt.InvalidOpcode;
 					}
 				} catch (IndexOutOfBoundsException e) { // execoes para acesso a elemento de memoria maior que o
-																// vetor
+														// vetor
 					interrupcaoAtiva = interrupt.InvalidAdrress;
 				}
 				// VERIFICA INTERRUPÇÃO !!! - TERCEIRA FASE DO CICLO DE INSTRUÇÕES
@@ -345,7 +348,7 @@ public class Sistema {
 
 			// paginação
 			// tamFrame = tamPag = 16;
-			tamFrame = tamPag = 4;///test
+			tamFrame = tamPag = 4;/// test
 			gm = new GM(tamMem, tamFrame);// instancia e inicia o gerenciador de memoria
 			// cpu
 			cpu = new CPU(m); // cpu acessa memória
@@ -355,7 +358,6 @@ public class Sistema {
 	// ------------------- V M - fim
 	// ------------------------------------------------------------------------
 	// -------------------------------------------------------------------------------------------------------
-
 
 	// --------------------H A R D W A R E - fim
 	// -------------------------------------------------------------
@@ -421,6 +423,8 @@ public class Sistema {
 		int tamMem;
 		int tamFrame;
 		boolean frameLivre[];
+		private boolean dynamicOverridePages = true; // habilita a alocação de paginas durante execução //PODE GERAR
+												// SOBRESCRITA!
 
 		public GM(int tamMem, int tamFrame) {
 			this.tamFrame = tamFrame;
@@ -431,20 +435,11 @@ public class Sistema {
 
 			for (int i = 0; i < nroFrames; i++) {// inicia todos os frames em true
 				frameLivre[i] = true;
-				
-				//System.out.println("TEST CASE ACTIVE!");
-				//if(i%2 == 0) frameLivre[i] = false; //test case
+
+				// System.out.println("TEST CASE ACTIVE!");
+				// if(i%2 == 0) frameLivre[i] = false; //test case
 			}
 
-		}
-
-		public class tabelaPaginaProcesso { // classe para modulalizar como objeto as tabelas. Cada processo possui sua
-											// tabela
-			ArrayList<Integer> tabela;
-
-			public tabelaPaginaProcesso() {
-				tabela = new ArrayList<>();
-			}
 		}
 
 		public boolean alocaPaginas(int nroPalavras, tabelaPaginaProcesso paginas) {
@@ -482,6 +477,7 @@ public class Sistema {
 			}
 
 		}
+
 		/**
 		 * Tradutor do endereco lógico
 		 * input: object tabela / int endereco logico
@@ -491,10 +487,25 @@ public class Sistema {
 			int totalFrames = t.tabela.size();
 			int p = posicaoSolicitada / tamFrame; // p = contagem de posicao no array da tabela
 			int offset = posicaoSolicitada % tamFrame; // offset desclocamente dentro do frame
+
+			if (p>=totalFrames && this.dynamicOverridePages){ //verifica se durante a exexcução foi requisitado algum endereco fora do escopo de paginas
+				alocaPaginas(1, t); //aloca nova pagina para posição
+			}
+
+
 			int frameInMemory = t.tabela.get(p); //obtem no indice de paginas o frame real da memoria 
 			int positionInMemory = tamFrame * frameInMemory + offset;
 			
 			return positionInMemory;
+		}
+
+		public class tabelaPaginaProcesso { // classe para modulalizar como objeto as tabelas. Cada processo possui sua
+			// tabela
+			ArrayList<Integer> tabela;
+
+			public tabelaPaginaProcesso() {
+				tabela = new ArrayList<>();
+			}
 		}
 
 	}
@@ -560,14 +571,14 @@ public class Sistema {
 		// s.roda(progs.progMinimo);
 		// s.roda(progs.fatorial);
 
-		//s.roda(progs.PB);
+		// s.roda(progs.PB);
 		// s.roda(progs.testOverFlow);
-		//s.roda(progs.testInvalidOpcode);
+		// s.roda(progs.testInvalidOpcode);
 		// s.roda(progs.testInvalidAdrress);
 		// s.roda(progs.testIN);
 		s.roda(progs.testOUT);
 		// s.roda(progs.PB);
-		//s.roda(progs.PA);
+		// s.roda(progs.PA);
 		// s.roda(progs.PC);
 
 	}
