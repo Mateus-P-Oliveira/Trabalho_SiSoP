@@ -6,6 +6,8 @@
 //Teste de commit
 
 import java.util.*;
+
+
 public class Sistema {
 	
 	// -------------------------------------------------------------------------------------------------------
@@ -99,7 +101,7 @@ public class Sistema {
 						case STD: // [A] <- Rs
 							    m[ir.p].opc = Opcode.DATA;
 							    m[ir.p].p = reg[ir.r1];
-							    pc++;
+								pc++;
 						break;
 
             			case LDI: // Rd <- k
@@ -300,9 +302,11 @@ public class Sistema {
     // ------------------- V M  - constituida de CPU e MEMORIA -----------------------------------------------
     // -------------------------- atributos e construcao da VM -----------------------------------------------
 	public class VM {//Mudar aqui para implementar o Gerenciador de Memoria 
-		public int tamMem, tamPag, tamFrame, nroFrames;   
+		public int tamMem, tamPag, tamFrame, nroFrames;
+		public GM gm;
         public Word[] m;     
         public CPU cpu;	
+
 	
 
         /*public VM(){    
@@ -314,20 +318,27 @@ public class Sistema {
 			 cpu = new CPU(m);   // cpu acessa memória
 	    }*/
 		
-		public VM(){ //Implementação da GM
-			//memória
-			tamMem = 1024;
-			tamPag = 16;
-			tamFrame = tamPag;
-			nroFrames = tamMem / tamPag;
-			int[]  mem = new int[tamMem];
-			//cpu
-			cpu = new CPU(m);
-			
-		}
+		public VM(){    
+	     // memória
+  		 	 tamMem = 1024;
+			 m = new Word[tamMem]; // m ee a memoria
+			 for (int i=0; i<tamMem; i++) { m[i] = new Word(Opcode.___,-1,-1,-1); };
+		
+		// paginação
+			//tamFrame = tamPag = 16;						
+			tamFrame = tamPag = 4;						
+			gm = new GM(tamMem, tamFrame);//instancia e inicia o gerenciador de memoria
+
+	  	 // cpu
+			 cpu = new CPU(m);   // cpu acessa memória
+		}	
+		
+		
 	}
     // ------------------- V M  - fim ------------------------------------------------------------------------
 	// -------------------------------------------------------------------------------------------------------
+	// Gerencia de Memoria
+
 
     // --------------------H A R D W A R E - fim -------------------------------------------------------------
     // -------------------------------------------------------------------------------------------------------
@@ -350,7 +361,12 @@ public class Sistema {
 					System.out.print(i); System.out.print(":  ");  dump(m[i]);
 				}
 			}
-			public void carga(Word[] p, Word[] m) {    // significa ler "p" de memoria secundaria e colocar na principal "m"
+			public void carga(Word[] p, Word[] m, GM.tabelaPaginaProcesso paginasDoProcesso) {    // significa ler "p" de memoria secundaria e colocar na principal "m"
+				//solicitar ao GM a tabela de paginas
+				vm.gm.alocaPaginas(p.length, paginasDoProcesso);
+
+				
+
 				for (int i = 0; i < p.length; i++) {
 					m[i].opc = p[i].opc;     m[i].r1 = p[i].r1;     m[i].r2 = p[i].r2;     m[i].p = p[i].p;
 				}
@@ -365,6 +381,73 @@ public class Sistema {
 		}
 	   // -------------------------------------------  
 		
+	public class GM{
+		int tamMem;
+		int tamFrame;
+		boolean frameLivre[];
+		
+		public GM(int tamMem, int tamFrame){
+			this.tamFrame = tamFrame;
+			this.tamMem = tamMem;
+
+			int nroFrames = tamMem / tamFrame;			
+			frameLivre= new boolean[nroFrames]; //seta o tamanho do array de frame
+
+			for(int i=0; i<nroFrames; i++){//inicia todos os frames em true
+				frameLivre[i]=true;
+			}
+
+		}
+
+		public class tabelaPaginaProcesso{ // classe para modulalizar como objeto as tabelas. Cada processo possui sua tabela
+			ArrayList<Integer> tabela; 
+			public tabelaPaginaProcesso(){
+				tabela = new ArrayList<>();
+			}			
+		}
+
+		public boolean alocaPaginas(int nroPalavras, tabelaPaginaProcesso paginas){
+			int nroframeslivre = 0; //verifica o total de frames livres
+			int paginasRequeridas = nroPalavras/this.tamFrame;
+
+
+			for (boolean b : frameLivre) { // calculando frames livres
+				if (b == true) nroframeslivre++;
+			}
+
+			if (paginasRequeridas<=nroframeslivre) { //verifica se há todos os frames necessários, se houve, ira carrega-los
+					
+				while(paginasRequeridas>0){ //aloca frames enquanto necessario
+
+					for(int i =0; i<frameLivre.length; i++){//iterar sobre o array de frames
+						if(frameLivre[i]==true){
+							frameLivre[i]=false;
+							paginas.tabela.add(i); // adiciona o frame 'i' no vetor das paginas do processo
+							paginasRequeridas--;
+							break;
+						}
+					}
+				}
+				return true;
+			}
+
+
+			return false;
+		}
+
+		public void desalocaPaginas(tabelaPaginaProcesso paginas){
+			for (int p : paginas.tabela) {
+				frameLivre[p]=true;				
+			}
+
+		}
+
+		public int tradutorEnderecoLogico(){
+			return -1;
+		}
+
+	}
+	
 
 
 
@@ -376,14 +459,26 @@ public class Sistema {
 	public static Programas progs;
 
     public Sistema(){   // a VM com tratamento de interrupções
-		 vm = new VM();
+		 vm = new VM();		 
 		 monitor = new Monitor();
 		 progs = new Programas(); 
 	}
 
 	public void roda(Word[] programa){
-			monitor.carga(programa, vm.m);    
+			//Instanciar um objeto para conter a tabela de paginas desse processo. Essa tabela irá ser manipulada pelo GM
+			GM.tabelaPaginaProcesso paginasDoProcesso = vm.gm.new tabelaPaginaProcesso(); 
+			
+			monitor.carga(programa, vm.m, paginasDoProcesso);    
 			System.out.println("---------------------------------- programa carregado ");
+
+			System.out.println("\n---------------------------------- PAGINAS DO PROCESSO ");
+			
+			for (Integer table: paginasDoProcesso.tabela) {
+				
+				System.out.println(table);
+			}
+	
+
 			monitor.dump(vm.m, 0, 90); //Muda o total do Dump
 			monitor.executa();        
 			System.out.println("---------------------------------- após execucao ");
