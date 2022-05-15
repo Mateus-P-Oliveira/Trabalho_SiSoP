@@ -5,6 +5,7 @@
 // Fase 3 - máquina virtual (vide enunciado correspondente)
 //Teste de commit
 
+import java.lang.reflect.Array;
 import java.util.*;
 
 public class Sistema {
@@ -370,6 +371,12 @@ public class Sistema {
 
 	// ------------------------------------------- funcoes de um monitor
 	public class Monitor {
+		GP gp;
+
+		public Monitor() {
+			gp = new GP();
+		}
+
 		public void dump(Word w) {
 			System.out.print("[ ");
 			System.out.print(w.opc);
@@ -390,16 +397,33 @@ public class Sistema {
 			}
 		}
 
+		public void dumpId(int id){
+			for (GP.PCB p : monitor.gp.ListProcess) {
+				if(p.getId() == id){
+					System.out.println("----------------------------------------");
+					System.out.println("PCB Info");
+					System.out.println("Process id: " + p.id);
+					System.out.println("Atual pc: " + p.pcContext);
+					System.out.println("Lista de frames ocupados pelo processo: " + p.tPaginaProcesso.toString());
+					System.out.println("Memoria dos frames");
+					for (int frame: p.tPaginaProcesso.tabela) {
+						vm.gm.dumpFrame(frame);
+					}
+				}
+				
+			}
+			
+		}
+
 		public void carga(Word[] p, Word[] m, GM.tabelaPaginaProcesso paginasDoProcesso) { // significa ler "p" de
 																							// memoria secundaria e
 																							// colocar na principal "m"
 			// solicitar ao GM a tabela de paginas
-			vm.gm.alocaPaginas(p.length, paginasDoProcesso);
-			System.out.println("Tabelas alocadas");
+			// vm.gm.alocaPaginas(p.length, paginasDoProcesso);
+			/*System.out.println("Tabelas alocadas");
 			for (Integer table : paginasDoProcesso.tabela) {
-
 				System.out.println(table);
-			}
+			}*/
 			for (int i = 0; i < p.length; i++) {
 				int t = vm.gm.translate(i, paginasDoProcesso);
 				m[t].opc = p[i].opc;
@@ -409,13 +433,28 @@ public class Sistema {
 			}
 		}
 
-		public void executa(GM.tabelaPaginaProcesso paginasDoProcesso) {
+		public void executa(int id) {
 			vm.cpu.resetInterrupt(); // zera os interruptores
-			vm.cpu.setContext(0, paginasDoProcesso); // monitor seta contexto - pc aponta para inicio do programa
-			vm.cpu.run(); // e cpu executa
-							// note aqui que o monitor espera que o programa carregado acabe normalmente
-							// nao ha protecoes... o que poderia acontecer ?
+
+			GP.PCB CurrentProcess = null;
+			for (int i = 0; i < monitor.gp.ListProcess.size(); i++) { // procura o processo pelo id
+				if (monitor.gp.ListProcess.get(i).id == id)
+					CurrentProcess = monitor.gp.ListProcess.get(i);
+
+			}
+			if (CurrentProcess == null) {
+				System.out.println("PROGRAMA NÃO ENCONTRADO");
+
+			} else {
+				vm.cpu.setContext(CurrentProcess.getPc(), CurrentProcess.getTPaginaProcesso()); // monitor seta contexto
+																								// - pc aponta para
+																								// inicio do programa
+				vm.cpu.run(); // e cpu executa
+								// note aqui que o monitor espera que o programa carregado acabe normalmente
+								// nao ha protecoes... o que poderia acontecer ?
+			}
 		}
+
 	}
 	// -------------------------------------------
 
@@ -424,7 +463,7 @@ public class Sistema {
 		int tamFrame;
 		boolean frameLivre[];
 		private boolean dynamicOverridePages = true; // habilita a alocação de paginas durante execução //PODE GERAR
-												// SOBRESCRITA!
+		// SOBRESCRITA!
 
 		public GM(int tamMem, int tamFrame) {
 			this.tamFrame = tamFrame;
@@ -436,8 +475,8 @@ public class Sistema {
 			for (int i = 0; i < nroFrames; i++) {// inicia todos os frames em true
 				frameLivre[i] = true;
 
-				// System.out.println("TEST CASE ACTIVE!");
-				// if(i%2 == 0) frameLivre[i] = false; //test case
+				System.out.println("BUSY FRAME TEST ACTIVE!");
+				if(i%2 == 0) frameLivre[i] = false; //test case
 			}
 
 		}
@@ -478,27 +517,43 @@ public class Sistema {
 
 		}
 
+		public void dumpFrame(int frame){
+			int pInicio = frame * vm.tamFrame;
+			int pFim = pInicio + tamFrame;
+			monitor.dump(vm.m, pInicio, pFim);
+		}
+
 		/**
 		 * Tradutor do endereco lógico
 		 * input: object tabela / int endereco logico
-		 * 		 * @return int posicao real na memoria
+		 * * @return int posicao real na memoria
 		 */
-		public int translate(int posicaoSolicitada, tabelaPaginaProcesso t){
+		public int translate(int posicaoSolicitada, tabelaPaginaProcesso t) {
 			int totalFrames = t.tabela.size();
 			int p = posicaoSolicitada / tamFrame; // p = contagem de posicao no array da tabela
 			int offset = posicaoSolicitada % tamFrame; // offset desclocamente dentro do frame
 
-			if (p>=totalFrames && this.dynamicOverridePages){ //verifica se durante a exexcução foi requisitado algum endereco fora do escopo de paginas
-				alocaPaginas(1, t); //aloca nova pagina para posição
+			if (p >= totalFrames && this.dynamicOverridePages) { // verifica se durante a exexcução foi requisitado
+																	// algum endereco fora do escopo de paginas
+				boolean sucessNewAllocaded =alocaPaginas(1, t); // aloca nova pagina para posição
+				if (sucessNewAllocaded) {
+					System.out.println("warning: new page is allocated");
+				}else{
+					vm.cpu.interrupcaoAtiva = interrupt.InvalidAdrress; // se nao conseguiu alocar, retorna problema de acesso a memoria
+				}
 			}
 
-
-			int frameInMemory = t.tabela.get(p); //obtem no indice de paginas o frame real da memoria 
+			int frameInMemory = t.tabela.get(p); // obtem no indice de paginas o frame real da memoria
 			int positionInMemory = tamFrame * frameInMemory + offset;
-			
+
 			return positionInMemory;
 		}
 
+
+
+		/**
+		 * Tabela das paginas do processos
+		 */
 		public class tabelaPaginaProcesso { // classe para modulalizar como objeto as tabelas. Cada processo possui sua
 			// tabela
 			ArrayList<Integer> tabela;
@@ -506,8 +561,102 @@ public class Sistema {
 			public tabelaPaginaProcesso() {
 				tabela = new ArrayList<>();
 			}
+			@Override
+			public String toString(){
+				String output="";
+				for (Integer i : tabela) {
+					output += " | "+ i + " | ";
+				}
+
+				return output;
+			}
+
 		}
 
+	}
+
+	/**
+	 * Gerenciador de processos
+	 */
+	public class GP {
+
+		/**
+		 * 
+		 * Metodo para criação de processo
+		 * 
+		 * @param programa
+		 *                 ListProcess = lista com todos os processos criados
+		 * @return true: alocação com sucesso
+		 * @return false: alocação falhou
+		 */
+
+		ArrayList<PCB> ListProcess = new ArrayList<PCB>();
+		Queue<PCB> Ready = new LinkedList<PCB>();
+
+		public int criaProcesso(Word[] programa) {
+			int programSize = programa.length;
+			if (programSize > vm.tamMem)
+				return -1; // verifica o tamanho do programa
+
+			GM.tabelaPaginaProcesso newPages = vm.gm.new tabelaPaginaProcesso();
+			boolean sucessAlocation = vm.gm.alocaPaginas(programSize, newPages); // faz alocação dad paginas
+			if (sucessAlocation) {
+				int id = ListProcess.size(); // id igual o ultimo tamanho do array de processos
+				monitor.carga(programa, vm.m, newPages);
+				PCB P = new PCB(id, 0, newPages);
+				ListProcess.add(P);
+				Ready.add(P);
+				return id;
+			}
+
+			return -1;
+
+		}
+
+		public void desalocaProcesso(int id) {
+			for (int i = 0; i < ListProcess.size(); i++) {
+				PCB Process = ListProcess.get(i);
+				if (Process.id == id) {
+					// remover de todas as listas
+					ListProcess.remove(Process);
+					Ready.remove(Process);
+				}
+			}
+		}
+
+		////////////////////////////////////
+		// ---------------PCB----------------/
+
+		public class PCB {
+			private int id;
+			private int pcContext;
+			private GM.tabelaPaginaProcesso tPaginaProcesso;
+
+			public PCB(int id, int pc, GM.tabelaPaginaProcesso tPaginaProcesso) {
+				this.id = id;
+				this.pcContext = pc;
+				this.tPaginaProcesso = tPaginaProcesso;
+
+			}
+
+			public int getId() {
+				return this.id;
+			}
+
+			public int getPc() {
+				return this.pcContext;
+			}
+
+			public void setPc(int newPc) {
+				this.pcContext = newPc;
+			}
+
+			public GM.tabelaPaginaProcesso getTPaginaProcesso() {
+				return this.tPaginaProcesso;
+
+			}
+
+		}
 	}
 
 	// -------------------------------------------------------------------------------------------------------
@@ -524,23 +673,36 @@ public class Sistema {
 		progs = new Programas();
 	}
 
-	public void roda(Word[] programa) {
+	/*
+	 * public void roda(Word[] programa) {
+	 * // Instanciar um objeto para conter a tabela de paginas desse processo. Essa
+	 * // tabela irá ser manipulada pelo GM
+	 * GM.tabelaPaginaProcesso paginasDoProcesso = vm.gm.new tabelaPaginaProcesso();
+	 * 
+	 * monitor.carga(programa, vm.m, paginasDoProcesso);
+	 * System.out.println("---------------------------------- programa carregado ");
+	 * 
+	 * System.out.
+	 * println("\n---------------------------------- PAGINAS DO PROCESSO ");
+	 * 
+	 * for (Integer table : paginasDoProcesso.tabela) {
+	 * 
+	 * System.out.println(table);
+	 * }
+	 * 
+	 * monitor.dump(vm.m, 0, 90); // Muda o total do Dump
+	 * monitor.executa(paginasDoProcesso);
+	 * System.out.println("---------------------------------- após execucao ");
+	 * monitor.dump(vm.m, 0, 90); // Muda o total do Dump
+	 * }
+	 */
+
+	public void roda(int id) { // metodo roda modificado
 		// Instanciar um objeto para conter a tabela de paginas desse processo. Essa
 		// tabela irá ser manipulada pelo GM
-		GM.tabelaPaginaProcesso paginasDoProcesso = vm.gm.new tabelaPaginaProcesso();
-
-		monitor.carga(programa, vm.m, paginasDoProcesso);
-		System.out.println("---------------------------------- programa carregado ");
-
-		System.out.println("\n---------------------------------- PAGINAS DO PROCESSO ");
-
-		for (Integer table : paginasDoProcesso.tabela) {
-
-			System.out.println(table);
-		}
 
 		monitor.dump(vm.m, 0, 90); // Muda o total do Dump
-		monitor.executa(paginasDoProcesso);
+		monitor.executa(id);
 		System.out.println("---------------------------------- após execucao ");
 		monitor.dump(vm.m, 0, 90); // Muda o total do Dump
 	}
@@ -566,17 +728,22 @@ public class Sistema {
 	public static void main(String args[]) {
 		Sistema s = new Sistema();
 
+		s.monitor.gp.criaProcesso(progs.PA);
+		s.monitor.executa(0);
+		s.monitor.dumpId(0);
+
+
 		// s.roda(progs.fibonacci10); // "progs" significa acesso/referencia ao programa
 		// em memoria secundaria
 		// s.roda(progs.progMinimo);
 		// s.roda(progs.fatorial);
 
-		// s.roda(progs.PB);
+		//s.roda(progs.PB);
 		// s.roda(progs.testOverFlow);
 		// s.roda(progs.testInvalidOpcode);
 		// s.roda(progs.testInvalidAdrress);
 		// s.roda(progs.testIN);
-		s.roda(progs.testOUT);
+		// s.roda(progs.testOUT);
 		// s.roda(progs.PB);
 		// s.roda(progs.PA);
 		// s.roda(progs.PC);
