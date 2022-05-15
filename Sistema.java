@@ -59,15 +59,16 @@ public class Sistema {
 
 		private Word[] m; // CPU acessa MEMORIA, guarda referencia 'm' a ela. memoria nao muda. ee sempre
 							// a mesma.
-		GM.tabelaPaginaProcesso paginasDoProcesso;
+		GM.tabelaPaginaProcesso pagesProcess;
 
 		public CPU(Word[] _m) { // ref a MEMORIA e interrupt handler passada na criacao da CPU
 			m = _m; // usa o atributo 'm' para acessar a memoria.
 			reg = new int[10]; // aloca o espaço dos registradores
 		}
 
-		public void setContext(int _pc) { // no futuro esta funcao vai ter que ser /// incremenado tabelaPagina do processo para o contexto
+		public void setContext(int _pc, GM.tabelaPaginaProcesso pagesProcess) { // no futuro esta funcao vai ter que ser /// incremenado tabelaPagina do processo para o contexto
 			pc = _pc; // limite e pc (deve ser zero nesta versao)
+			this.pagesProcess = pagesProcess;
 		}
 
 		private void dump(Word w) {
@@ -105,15 +106,18 @@ public class Sistema {
 			while (stateRun) { // ciclo de instrucoes. acaba cfe instrucao, veja cada caso.
 				try {
 					// FETCH
-					ir = m[pc]; // busca posicao da memoria apontada por pc, guarda em ir
+					int addressT = vm.gm.translate(pc, pagesProcess);
+					int addressT_2; // usado como reserva em caso especifico
+					ir = m[addressT]; // busca posicao da memoria apontada por pc, guarda em ir
 					// if debug
 					showState();
 					// EXECUTA INSTRUCAO NO ir
 					switch (ir.opc) { // para cada opcode, sua execução
 
 						case STD: // [A] <- Rs
-							m[ir.p].opc = Opcode.DATA;
-							m[ir.p].p = reg[ir.r1];
+							addressT = vm.gm.translate(ir.p, pagesProcess); //address assume o valor traduzido de ir.p
+							m[addressT].opc = Opcode.DATA;
+							m[addressT].p = reg[ir.r1];
 							pc++;
 							break;
 
@@ -124,7 +128,9 @@ public class Sistema {
 
 						case LDD: // Rd <- [A] //Here
 							// m[ir.p].opc = Opcode.DATA; //Leitura não precisa saber se é um dado
-							reg[ir.r1] = m[ir.p].p; // Ajustar para memoria
+							addressT = vm.gm.translate(ir.r1, pagesProcess); //address assume o valor traduzido de ir.r1
+							addressT_2 = vm.gm.translate(ir.p, pagesProcess);
+							reg[addressT] = m[addressT_2].p; // Ajustar para memoria
 							pc++;
 							break;
 
@@ -135,8 +141,9 @@ public class Sistema {
 							break;
 
 						case STX: // [Rd] ←Rs
-							m[reg[ir.r1]].opc = Opcode.DATA;
-							m[reg[ir.r1]].p = reg[ir.r2];
+							addressT = vm.gm.translate(reg[ir.r1], pagesProcess);
+							m[addressT].opc = Opcode.DATA;
+							m[addressT].p = reg[ir.r2];
 							pc++;
 							break;
 
@@ -215,11 +222,13 @@ public class Sistema {
 							break;
 
 						case JMPIM:// Here
-							pc = m[ir.p].p;
+							addressT = vm.gm.translate(ir.p, pagesProcess);
+							pc = m[addressT].p;
 
 						case JMPIGM: // if Rc > 0 then PC <- [A] Else PC <- PC +1 // Here
 							if (reg[ir.r2] > 0) {
-								pc = m[ir.p].p;
+								addressT = vm.gm.translate(ir.p, pagesProcess);
+								pc = m[addressT].p;
 							} else {
 								pc++;
 							}
@@ -227,7 +236,8 @@ public class Sistema {
 
 						case JMPILM: // if Rc < 0 then PC <- [A] Else PC <- PC +1 //Here
 							if (reg[ir.r2] < 0) {
-								pc = m[ir.p].p;
+								addressT = vm.gm.translate(ir.p, pagesProcess);
+								pc = m[addressT].p;
 							} else {
 								pc++;
 							}
@@ -235,7 +245,8 @@ public class Sistema {
 
 						case JMPIEM: // if Rc = 0 then PC <- [A] Else PC <- PC +1
 							if (reg[ir.r2] == 0) {
-								pc = m[ir.p].p;
+								addressT = vm.gm.translate(ir.p, pagesProcess);
+								pc = m[addressT].p;
 							} else {
 								pc++;
 							}
@@ -256,16 +267,19 @@ public class Sistema {
 								Scanner myObj = new Scanner(System.in); // instancia leituras do java
 								System.out.print("Input integer: ");
 								String inputUser = myObj.nextLine(); // le o numero do usuario
-								m[reg[9]].p = Integer.parseInt(inputUser); // conforme a entrada e salva na posição da
+
+								addressT = vm.gm.translate(reg[9], pagesProcess);
+								m[addressT].p = Integer.parseInt(inputUser); // conforme a entrada e salva na posição da
 																			// memoria
-								m[reg[9]].opc = Opcode.DATA;
+								m[addressT].opc = Opcode.DATA;
 								// Conforme exemplo do professor
 								// || reg[9] (obtem o valor dentro do registrador) =4, entao, m[4], logo m[4] <-
 								// input
 							}
 
 							if (reg[8] == 2) { // TRAP = 2 -> chamada de OUT
-								int output = m[reg[9]].p; // reg[9]=10, logo, m[10] || output <- m[10]
+								addressT = vm.gm.translate(reg[9], pagesProcess);
+								int output = m[addressT].p; // reg[9]=10, logo, m[10] || output <- m[10]
 								System.out.println(output);
 								// ?? forma flexíveL, verificar ultima especificacao da Fase3
 							}
@@ -280,7 +294,7 @@ public class Sistema {
 							// liga interrup (2)
 							interrupcaoAtiva = interrupt.InvalidOpcode;
 					}
-				} catch (ArrayIndexOutOfBoundsException e) { // execoes para acesso a elemento de memoria maior que o
+				} catch (IndexOutOfBoundsException e) { // execoes para acesso a elemento de memoria maior que o
 																// vetor
 					interrupcaoAtiva = interrupt.InvalidAdrress;
 				}
@@ -393,9 +407,9 @@ public class Sistema {
 			}
 		}
 
-		public void executa() {
+		public void executa(GM.tabelaPaginaProcesso paginasDoProcesso) {
 			vm.cpu.resetInterrupt(); // zera os interruptores
-			vm.cpu.setContext(0); // monitor seta contexto - pc aponta para inicio do programa
+			vm.cpu.setContext(0, paginasDoProcesso); // monitor seta contexto - pc aponta para inicio do programa
 			vm.cpu.run(); // e cpu executa
 							// note aqui que o monitor espera que o programa carregado acabe normalmente
 							// nao ha protecoes... o que poderia acontecer ?
@@ -418,8 +432,8 @@ public class Sistema {
 			for (int i = 0; i < nroFrames; i++) {// inicia todos os frames em true
 				frameLivre[i] = true;
 				
-				System.out.println("TEST CASE ACTIVE!");
-				if(i%2 == 0) frameLivre[i] = false; //test case
+				//System.out.println("TEST CASE ACTIVE!");
+				//if(i%2 == 0) frameLivre[i] = false; //test case
 			}
 
 		}
@@ -515,7 +529,7 @@ public class Sistema {
 		}
 
 		monitor.dump(vm.m, 0, 90); // Muda o total do Dump
-		monitor.executa();
+		monitor.executa(paginasDoProcesso);
 		System.out.println("---------------------------------- após execucao ");
 		monitor.dump(vm.m, 0, 90); // Muda o total do Dump
 	}
@@ -546,14 +560,14 @@ public class Sistema {
 		// s.roda(progs.progMinimo);
 		// s.roda(progs.fatorial);
 
-		// s.roda(progs.PB);
+		//s.roda(progs.PB);
 		// s.roda(progs.testOverFlow);
-		// s.roda(progs.testInvalidOpcode);
+		//s.roda(progs.testInvalidOpcode);
 		// s.roda(progs.testInvalidAdrress);
 		// s.roda(progs.testIN);
-		// s.roda(progs.testOUT);
+		s.roda(progs.testOUT);
 		// s.roda(progs.PB);
-		s.roda(progs.PA);
+		//s.roda(progs.PA);
 		// s.roda(progs.PC);
 
 	}
@@ -690,7 +704,7 @@ public class Sistema {
 				new Word(Opcode.LDI, 2, -1, -1),
 				new Word(Opcode.LDI, 3, -1, 14),
 				new Word(Opcode.LDI, 4, -1, 1),
-				new Word(Opcode.LDI, 5, -1, 20),
+				new Word(Opcode.LDI, 5, -1, 17),
 				// JMP para testar o zero
 				new Word(Opcode.JMPIL, 1, 0, -1),
 				// Loop Fibonacci
@@ -704,7 +718,7 @@ public class Sistema {
 				// Fim do programa caso tenha tido sequencia
 				new Word(Opcode.STOP, -1, -1, -1),
 				// Fim do programa caso tenha sido um zero
-				new Word(Opcode.STD, 2, -1, 20),
+				new Word(Opcode.STD, 2, -1, 17),
 				new Word(Opcode.STOP, -1, -1, -1)
 		};
 
