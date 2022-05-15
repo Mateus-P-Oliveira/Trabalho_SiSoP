@@ -59,13 +59,14 @@ public class Sistema {
 
 		private Word[] m; // CPU acessa MEMORIA, guarda referencia 'm' a ela. memoria nao muda. ee sempre
 							// a mesma.
+		GM.tabelaPaginaProcesso paginasDoProcesso;
 
 		public CPU(Word[] _m) { // ref a MEMORIA e interrupt handler passada na criacao da CPU
 			m = _m; // usa o atributo 'm' para acessar a memoria.
 			reg = new int[10]; // aloca o espaço dos registradores
 		}
 
-		public void setContext(int _pc) { // no futuro esta funcao vai ter que ser
+		public void setContext(int _pc) { // no futuro esta funcao vai ter que ser /// incremenado tabelaPagina do processo para o contexto
 			pc = _pc; // limite e pc (deve ser zero nesta versao)
 		}
 
@@ -330,9 +331,8 @@ public class Sistema {
 
 			// paginação
 			// tamFrame = tamPag = 16;
-			tamFrame = tamPag = 4;
+			tamFrame = tamPag = 4;///test
 			gm = new GM(tamMem, tamFrame);// instancia e inicia o gerenciador de memoria
-
 			// cpu
 			cpu = new CPU(m); // cpu acessa memória
 		}
@@ -341,7 +341,7 @@ public class Sistema {
 	// ------------------- V M - fim
 	// ------------------------------------------------------------------------
 	// -------------------------------------------------------------------------------------------------------
-	// Gerencia de Memoria
+
 
 	// --------------------H A R D W A R E - fim
 	// -------------------------------------------------------------
@@ -379,12 +379,17 @@ public class Sistema {
 																							// colocar na principal "m"
 			// solicitar ao GM a tabela de paginas
 			vm.gm.alocaPaginas(p.length, paginasDoProcesso);
+			System.out.println("Tabelas alocadas");
+			for (Integer table : paginasDoProcesso.tabela) {
 
+				System.out.println(table);
+			}
 			for (int i = 0; i < p.length; i++) {
-				m[i].opc = p[i].opc;
-				m[i].r1 = p[i].r1;
-				m[i].r2 = p[i].r2;
-				m[i].p = p[i].p;
+				int t = vm.gm.translate(i, paginasDoProcesso);
+				m[t].opc = p[i].opc;
+				m[t].r1 = p[i].r1;
+				m[t].r2 = p[i].r2;
+				m[t].p = p[i].p;
 			}
 		}
 
@@ -412,6 +417,9 @@ public class Sistema {
 
 			for (int i = 0; i < nroFrames; i++) {// inicia todos os frames em true
 				frameLivre[i] = true;
+				
+				System.out.println("TEST CASE ACTIVE!");
+				if(i%2 == 0) frameLivre[i] = false; //test case
 			}
 
 		}
@@ -437,7 +445,7 @@ public class Sistema {
 			if (paginasRequeridas <= nroframeslivre) { // verifica se há todos os frames necessários, se houve, ira
 														// carrega-los
 
-				while (paginasRequeridas > 0) { // aloca frames enquanto necessario
+				while (paginasRequeridas >= 0) { // aloca frames enquanto necessario
 
 					for (int i = 0; i < frameLivre.length; i++) {// iterar sobre o array de frames
 						if (frameLivre[i] == true) {
@@ -460,9 +468,19 @@ public class Sistema {
 			}
 
 		}
-
-		public int tradutorEnderecoLogico() {
-			return -1;
+		/**
+		 * Tradutor do endereco lógico
+		 * input: object tabela / int endereco logico
+		 * 		 * @return int posicao real na memoria
+		 */
+		public int translate(int posicaoSolicitada, tabelaPaginaProcesso t){
+			int totalFrames = t.tabela.size();
+			int p = posicaoSolicitada / tamFrame; // p = contagem de posicao no array da tabela
+			int offset = posicaoSolicitada % tamFrame; // offset desclocamente dentro do frame
+			int frameInMemory = t.tabela.get(p); //obtem no indice de paginas o frame real da memoria 
+			int positionInMemory = tamFrame * frameInMemory + offset;
+			
+			return positionInMemory;
 		}
 
 	}
