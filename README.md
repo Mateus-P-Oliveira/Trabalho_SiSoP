@@ -14,7 +14,11 @@ javac Sistema.java
 ## Run
 java Sistema
 
+### Observações
+
 ## Terminal Commands
 - *cria*: faz a alocao do processo no sistema
 Ex:
 'cria PA'
+
+
