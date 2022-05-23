@@ -23,17 +23,6 @@ Outra implementacao foi a variavel ***dynamicOverridePages***,se habilitada como
 
 
 ## Terminal Commands
-<<<<<<< HEAD
-- *cria NomeDoPrograma*: faz a alocao do processo no sistema. Retorna o Id do processo. Podem ser alocados varios processos simultaneamente
-- *executa [id]*: executa o id do processo alocado.
-- *dump [id]*: Exibe os informações do processo/PCB e frames de memoria
-- *dumpM [0][1]*: Exibe
-- **
-Ex:
-
-```
-cria PA
-=======
 Funções solicitadas:
 - **cria *NomeDoPrograma***: faz a alocao do processo no sistema. Retorna o Id do processo. Podem ser alocados varios processos simultaneamente
 - **executa *id***: executa o id do processo alocado.
@@ -49,7 +38,6 @@ executa 0
 dump 0
 dumpM 3 20
 desaloca 0
->>>>>>> 33772a0766e7852493d8d44c76baf52e7783f871
 ```
 
 
