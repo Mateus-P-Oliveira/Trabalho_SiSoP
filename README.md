@@ -15,6 +15,12 @@ javac Sistema.java
 java Sistema
 
 ### Observações
+Implementados um caso de teste para comprovar o funcionamento do gerenciamento de maemoria e paginacao. 
+Há uma variável dentro da classe GM, ***busyFrameTest***, se true, ela seta todos os frames pares como ocupados. Isso permite visualizar a interpolação de paginacao.
+
+Outra implementacao foi a variavel ***dynamicOverridePages***,se habilitada como true, permite que o programa durante sua execução faça alocação dinamica de paginas. Por exemplo, se o programa tem tamanho 16, são alocadas proporcionais paginas para 16 endereços. Caso ele solicite o endereco 20, não tera em sua paginas, neste caso, o programa faz alocação de um novo frama (procura pelos frames e aloca no primeiro livre (FirstFit)). Obs: Não há sobreescrita, é validado o frameLivre[]=true
+
+
 
 ## Terminal Commands
 Funções solicitadas:
@@ -22,8 +28,9 @@ Funções solicitadas:
 - **executa *id***: executa o id do processo alocado.
 - **dump *id***: Exibe os informações do processo/PCB e frames de memoria
 - **dumpM *0 1***: Exibe um dump das posicoes de memoria definidas por 0=inicio e 1=final
-- **desaloca *id***: desaloca o process. Remove-o da lista de processos. Os frames são liberados, mas o conteúdo da posição não é limpo. Poré, o frameLivre permite ser sobreescrito
-Cuidar sensetive case:
+- **desaloca *id***: desaloca o processo. Remove-o da lista de processos. Os frames são liberados (FrameLivre[]=true), mas o conteúdo da posição não é limpo. PoréM, o frameLivre permite ser sobreescrito
+Ex:
+*Cuidar sensetive case*
 
 ```
 cria PA
