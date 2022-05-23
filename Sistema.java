@@ -352,7 +352,7 @@ public class Sistema {
 
 			// paginação
 			// tamFrame = tamPag = 16;
-			tamFrame = tamPag = 4;/// test
+			tamFrame = tamPag = 16;/// test
 			nroFrames = tamMem / tamFrame;
 
 			gm = new GM(tamMem, tamFrame);// instancia e inicia o gerenciador de memoria
@@ -370,13 +370,17 @@ public class Sistema {
 	public void showConfiguration(){
 		System.out.println("\n\n-----------------------------------------------------------");
 		System.out.println("*Verificar explicacoes no readme");
-		System.out.println("Habilitacao de paginacao dinamica*: " + vm.gm.dynamicOverridePages);
+		System.out.println("https://github.com/gilbertokoerbes/Trabalho_SiSoP/blob/main/README.md");
+		System.out.println("https://github.com/Mateus-P-Oliveira/Trabalho_SiSoP/blob/main/README.md");
+		System.out.println("https://github.com/NathanEspindola/Trabalho_SiSoP/blob/main/README.md");
+
+		System.out.println("\nHabilitacao de paginacao dinamica*: " + vm.gm.dynamicOverridePages);
 		System.out.println("Habilitacao de frames ocupados para testes*: " + vm.gm.busyFrameTest);
-		System.out.println("-----");
+		System.out.println("\n\n---------------------------------------------------------------");
 		System.out.print("Memoria total: " + vm.tamMem);
 		System.out.print(" | Tamanho dos frames: " + vm.tamFrame);
 		System.out.println(" | Total de frames: " + vm.nroFrames);
-		System.out.println("-----------------------------------------------------------\n\n");
+		System.out.println("--------------------------------------------------------------------\n\n");
 		
 
 
@@ -459,10 +463,10 @@ public class Sistema {
 			for (GP.PCB p : monitor.gp.ListProcess) {
 					System.out.println("----------------------------------------");
 					System.out.print("PCB Info");
-					System.out.print("			Process id: " + p.id);
-					System.out.print("									Atual pc: " + p.pcContext);
-					System.out.println("															Lista de frames ocupados pelo processo: " + p.tPaginaProcesso.toString());
-					
+					System.out.print("		| Process id: " + p.id);
+					System.out.print("		| Atual pc: " + p.pcContext);
+					System.out.print("		| Lista de frames ocupados pelo processo: " + p.tPaginaProcesso.toString());
+					System.out.println("	| State: "+p.getStateString());
 
 			}
 
@@ -556,6 +560,9 @@ public class Sistema {
 			int nroframeslivre = 0; // verifica o total de frames livres
 			int paginasRequeridas = nroPalavras / this.tamFrame;
 
+			int offset = nroPalavras % this.tamFrame; //caso haja divisao quebrada, necessita mais uma pagina
+			if(offset!=0) paginasRequeridas++;
+
 			for (boolean b : frameLivre) { // calculando frames livres
 				if (b == true)
 					nroframeslivre++;
@@ -589,6 +596,8 @@ public class Sistema {
 		}
 
 		public void dumpFrame(int frame) {
+			System.out.println("FrameLivre: " + vm.gm.frameLivre[frame]);
+
 			int pInicio = frame * vm.tamFrame;
 			int pFim = pInicio + tamFrame;
 			monitor.dump(vm.m, pInicio, pFim);
@@ -662,6 +671,13 @@ public class Sistema {
 		 * ListProcess = lista com todos os processos criados que estão em memoria
 		 */
 		ArrayList<PCB> ListProcess = new ArrayList<PCB>();
+		int uniqueId = 0;
+
+		public int getUniqueId(){
+			int idReturn = this.uniqueId;
+			this.uniqueId++;
+			return idReturn;
+		}
 		
 
 		/**
@@ -681,7 +697,7 @@ public class Sistema {
 			GM.tabelaPaginaProcesso newPages = vm.gm.new tabelaPaginaProcesso();
 			boolean sucessAlocation = vm.gm.alocaPaginas(programSize, newPages); // faz alocação dad paginas
 			if (sucessAlocation) {
-				int id = ListProcess.size(); // id igual o ultimo tamanho do array de processos
+				int id = getUniqueId(); // id igual o ultimo tamanho do array de processos
 				monitor.carga(programa, vm.m, newPages);
 				PCB P = new PCB(id, 0, newPages);
 				ListProcess.add(P);
@@ -825,10 +841,11 @@ public class Sistema {
 						int ini = Integer.parseInt(inputParams[1]); 
 						int fim = Integer.parseInt(inputParams[2]) + 1; //correcao para comtemplar a ultima posicao solicitada 
 						s.monitor.dump(vm.m, ini, fim);
+						break;
 
 					case "desaloca":
 						id = Integer.parseInt(inputParams[1]);
-						s.monitor.dumpId(id);
+						s.monitor.gp.desalocaProcesso(id);;
 						break;
 					case "dumpAllFrames":						
 						s.monitor.dumpAllFrames();//exibit todos os frames
@@ -836,6 +853,7 @@ public class Sistema {
 					case "dumpFrame":
 						int frame = Integer.parseInt(inputParams[1]);
 						vm.gm.dumpFrame(frame);
+						break;
 					case "ps":
 						s.monitor.ps();	
 						break;

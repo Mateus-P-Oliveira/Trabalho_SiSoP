@@ -17,8 +17,15 @@ java Sistema
 ### Observações
 
 ## Terminal Commands
-- *cria*: faz a alocao do processo no sistema
+- *cria NomeDoPrograma*: faz a alocao do processo no sistema. Retorna o Id do processo. Podem ser alocados varios processos simultaneamente
+- *executa [id]*: executa o id do processo alocado.
+- *dump [id]*: Exibe os informações do processo/PCB e frames de memoria
+- *dumpM [0][1]*: Exibe
+- **
 Ex:
-'cria PA'
+
+```
+cria PA
+```
 
 
