@@ -7,6 +7,8 @@
 
 import java.lang.reflect.Array;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+
 
 public class Sistema {
 
@@ -61,17 +63,19 @@ public class Sistema {
 		private Word[] m; // CPU acessa MEMORIA, guarda referencia 'm' a ela. memoria nao muda. ee sempre
 							// a mesma.
 		GM.tabelaPaginaProcesso pagesProcess;
+		STATE state;
 
 		public CPU(Word[] _m) { // ref a MEMORIA e interrupt handler passada na criacao da CPU
 			m = _m; // usa o atributo 'm' para acessar a memoria.
 			reg = new int[10]; // aloca o espaço dos registradores
 		}
 
-		public void setContext(int _pc, GM.tabelaPaginaProcesso pagesProcess) { // no futuro esta funcao vai ter que ser
+		public void setContext(int _pc, GM.tabelaPaginaProcesso pagesProcess, STATE state) { // no futuro esta funcao vai ter que ser
 																				// /// incremenado tabelaPagina do
 																				// processo para o contexto
 			pc = _pc; // limite e pc (deve ser zero nesta versao)
 			this.pagesProcess = pagesProcess;
+			this.state = state;
 		}
 
 		private void dump(Word w) {
@@ -144,19 +148,19 @@ public class Sistema {
 							pc++;
 							break;
 
-						case STX: // [Rd] ←Rs
+						case STX: // [Rd] <- Rs
 							addressT = vm.gm.translate(reg[ir.r1], pagesProcess);
 							m[addressT].opc = Opcode.DATA;
 							m[addressT].p = reg[ir.r2];
 							pc++;
 							break;
 
-						case ADD: // Rd ← Rd + Rs
+						case ADD: // Rd <- Rd + Rs
 							reg[ir.r1] = reg[ir.r1] + reg[ir.r2];
 							pc++;
 							break;
 
-						case MULT: // Rd ← Rd * Rs
+						case MULT: // Rd <- Rd * Rs
 
 							try {
 								long tmp = (long) reg[ir.r1] * (long) reg[ir.r2];
@@ -174,7 +178,7 @@ public class Sistema {
 
 							break;
 
-						case ADDI: // Rd ← Rd + k
+						case ADDI: // Rd <- Rd + k
 
 							reg[ir.r1] = reg[ir.r1] + ir.p;
 							pc++;
@@ -195,7 +199,7 @@ public class Sistema {
 							pc = ir.r1;
 							break;
 
-						case JMP: // PC ← k
+						case JMP: // PC <- k
 							pc = ir.p;
 							break;
 
@@ -207,7 +211,7 @@ public class Sistema {
 							}
 							break;
 
-						case JMPIG: // If Rc > 0 Then PC ← Rs Else PC ← PC +1
+						case JMPIG: // If Rc > 0 Then PC <- Rs Else PC <- PC +1
 
 							if (reg[ir.r2] > 0) {
 								pc = reg[ir.r1];
@@ -216,7 +220,7 @@ public class Sistema {
 							}
 							break;
 
-						case JMPIE: // If Rc = 0 Then PC ← Rs Else PC ← PC +1
+						case JMPIE: // If Rc = 0 Then PC <- Rs Else PC <- PC +1
 
 							if (reg[ir.r2] == 0) {
 								pc = reg[ir.r1];
@@ -345,22 +349,39 @@ public class Sistema {
 			for (int i = 0; i < tamMem; i++) {
 				m[i] = new Word(Opcode.___, -1, -1, -1);
 			}
-			
 
 			// paginação
 			// tamFrame = tamPag = 16;
 			tamFrame = tamPag = 4;/// test
-			nroFrames = tamMem/tamFrame;
+			nroFrames = tamMem / tamFrame;
 
 			gm = new GM(tamMem, tamFrame);// instancia e inicia o gerenciador de memoria
 			// cpu
 			cpu = new CPU(m); // cpu acessa memória
 		}
 
+
 	}
+
 	// ------------------- V M - fim
 	// ------------------------------------------------------------------------
 	// -------------------------------------------------------------------------------------------------------
+
+	public void showConfiguration(){
+		System.out.println("\n\n-----------------------------------------------------------");
+		System.out.println("*Verificar explicacoes no readme");
+		System.out.println("Habilitacao de paginacao dinamica*: " + vm.gm.dynamicOverridePages);
+		System.out.println("Habilitacao de frames ocupados para testes*: " + vm.gm.busyFrameTest);
+		System.out.println("-----");
+		System.out.print("Memoria total: " + vm.tamMem);
+		System.out.print(" | Tamanho dos frames: " + vm.tamFrame);
+		System.out.println(" | Total de frames: " + vm.nroFrames);
+		System.out.println("-----------------------------------------------------------\n\n");
+		
+
+
+			
+	}
 
 	// --------------------H A R D W A R E - fim
 	// -------------------------------------------------------------
@@ -402,13 +423,13 @@ public class Sistema {
 		/**
 		 * Dump frames da memoria
 		 */
-		public void dumpFrames(){
+		public void dumpAllFrames() {
 
 			for (int i = 0; i < vm.nroFrames; i++) {
 				System.out.println("----------------------------");
 				System.out.println("FRAME " + i + ":");
-				System.out.println("Frame Livre = " + vm.gm.frameLivre[i]);				
-				
+				System.out.println("Frame Livre = " + vm.gm.frameLivre[i]);
+
 				vm.gm.dumpFrame(i);
 
 				System.out.println("----------------------------");
@@ -434,6 +455,21 @@ public class Sistema {
 
 		}
 
+		public void ps(){
+			for (GP.PCB p : monitor.gp.ListProcess) {
+					System.out.println("----------------------------------------");
+					System.out.print("PCB Info");
+					System.out.print("			Process id: " + p.id);
+					System.out.print("									Atual pc: " + p.pcContext);
+					System.out.println("															Lista de frames ocupados pelo processo: " + p.tPaginaProcesso.toString());
+					
+
+			}
+
+		}
+
+		
+
 		public void carga(Word[] p, Word[] m, GM.tabelaPaginaProcesso paginasDoProcesso) { // significa ler "p" de
 																							// memoria secundaria e
 																							// colocar na principal "m"
@@ -457,10 +493,10 @@ public class Sistema {
 
 			}
 			if (CurrentProcess == null) {
-				System.out.println("PROGRAMA NÃO ENCONTRADO");
+				System.out.println("PROGRAMA NAO ENCONTRADO");
 
 			} else {
-				vm.cpu.setContext(CurrentProcess.getPc(), CurrentProcess.getTPaginaProcesso()); // monitor seta contexto
+				vm.cpu.setContext(CurrentProcess.getPc(), CurrentProcess.getTPaginaProcesso(), STATE.RUNNING); // monitor seta contexto
 																								// - pc aponta para
 																								// inicio do programa
 				vm.cpu.run(); // e cpu executa
@@ -476,23 +512,24 @@ public class Sistema {
 		int tamMem;
 		int tamFrame;
 		boolean frameLivre[];
-		
+
 		/**
 		 * habilita a alocação de paginas durante execução PODE GERAR SOBRESCRITA! \n
-		 * Ex: caso o programa tente acessar uma posição de memória ou pagina que não é sua, é verificado se está disponivel. 
+		 * Ex: caso o programa tente acessar uma posição de memória ou pagina que não é
+		 * sua, é verificado se está disponivel.
 		 * Se disponivel, ira alocar uma nova pagina para o processo poder prosseguir
-		 *@return "Um aviso de nova alocação é informado"
+		 * 
+		 * @return "Um aviso de nova alocação é informado"
 		 */
-		private boolean dynamicOverridePages = false; 
+		public boolean dynamicOverridePages = true;
 
 		/**
 		 * Variavel para simular sem programas a ocupacao de frames de forma intercala.
-		 *{@literal} Objetivo: mostrar e comprovar o comportamento do sistema.
+		 * {@literal} Objetivo: mostrar e comprovar o comportamento do sistema.
 		 * 
-		*/
-		private boolean busyFrameTest = false;
+		 */
+		public boolean busyFrameTest = true;
 
-		
 		public GM(int tamMem, int tamFrame) {
 			this.tamFrame = tamFrame;
 			this.tamMem = tamMem;
@@ -500,13 +537,17 @@ public class Sistema {
 			int nroFrames = tamMem / tamFrame;
 			frameLivre = new boolean[nroFrames]; // seta o tamanho do array de frame
 
+			if (busyFrameTest) {
+			System.out.println("*BUSY FRAME TEST ACTIVE!"); //avisa sobre o teste ativo
+			System.out.println("Frames alocados como ocupados: ");
+			}
 			for (int i = 0; i < nroFrames; i++) {// inicia todos os frames em true
 				frameLivre[i] = true;
 
-				if (i % 2 == 0 && busyFrameTest){
-					System.out.println("BUSY FRAME TEST ACTIVE!");
+				if (i % 2 == 0 && busyFrameTest) {
+					System.out.print(" | " + i );
 					frameLivre[i] = false; // test case
-				}					
+				}
 			}
 
 		}
@@ -604,25 +645,34 @@ public class Sistema {
 		}
 
 	}
-
+	/**
+	 * States do processo, utilizado por GP
+	 * @see Sistema.GP
+	 */
+	public enum STATE{
+		RUNNING, 
+		READY;
+	}
 	/**
 	 * Gerenciador de processos
 	 */
 	public class GP {
 
 		/**
+		 * ListProcess = lista com todos os processos criados que estão em memoria
+		 */
+		ArrayList<PCB> ListProcess = new ArrayList<PCB>();
+		
+
+		/**
 		 * 
 		 * Metodo para criação de processo
 		 * 
 		 * @param programa
-		 *                 ListProcess = lista com todos os processos criados
+
 		 * @return true: alocação com sucesso
 		 * @return false: alocação falhou
 		 */
-
-		ArrayList<PCB> ListProcess = new ArrayList<PCB>();
-		Queue<PCB> Ready = new LinkedList<PCB>();
-
 		public int criaProcesso(Word[] programa) {
 			int programSize = programa.length;
 			if (programSize > vm.tamMem)
@@ -635,7 +685,6 @@ public class Sistema {
 				monitor.carga(programa, vm.m, newPages);
 				PCB P = new PCB(id, 0, newPages);
 				ListProcess.add(P);
-				Ready.add(P);
 				return id;
 			}
 
@@ -648,8 +697,11 @@ public class Sistema {
 				PCB Process = ListProcess.get(i);
 				if (Process.id == id) {
 					// remover de todas as listas
+					for(Integer framePos : Process.tPaginaProcesso.tabela){ //desaloca os frames ocupados
+						vm.gm.frameLivre[framePos] = true;
+					}
 					ListProcess.remove(Process);
-					Ready.remove(Process);
+
 				}
 			}
 		}
@@ -660,13 +712,14 @@ public class Sistema {
 		public class PCB {
 			private int id;
 			private int pcContext;
+			private STATE state;
 			private GM.tabelaPaginaProcesso tPaginaProcesso;
 
 			public PCB(int id, int pc, GM.tabelaPaginaProcesso tPaginaProcesso) {
 				this.id = id;
 				this.pcContext = pc;
 				this.tPaginaProcesso = tPaginaProcesso;
-
+				this.state = STATE.READY;
 			}
 
 			public int getId() {
@@ -679,6 +732,25 @@ public class Sistema {
 
 			public void setPc(int newPc) {
 				this.pcContext = newPc;
+			}
+
+			public void setState(STATE state){
+				this.state = state;
+			}
+			public STATE getState(){
+				return this.state;
+			}
+			
+			public String getStateString(){
+				switch (this.state) {
+					case READY:
+						return "Ready";
+					case RUNNING:
+						return "Running";
+					default:
+						return "STATE FAILED!";					
+					
+				}
 			}
 
 			public GM.tabelaPaginaProcesso getTPaginaProcesso() {
@@ -705,29 +777,29 @@ public class Sistema {
 	}
 
 	public class Terminal {
-		public Terminal(){
+		public Terminal() {
 		}
 
 		public Terminal(Sistema s) {
-			boolean run = true;
+			boolean SystemRun = true;
 			Scanner scanner = new Scanner(System.in);
-			while (run) {
+			while (SystemRun) {
 
-				System.out.print("terminal: ");
+				System.out.print("~$terminal: ");
 				String inputConsole = scanner.nextLine();				
 				String inputParams[] = inputConsole.split(" ");
 				int id = -1; //id de processo quando solicitado
-
+				try{
 				switch (inputParams[0]) {
-
-					case "criaProcesso":
+					
+					case "cria":
 						System.out.println("Processo solicitado = " + inputParams[1]);
 						int idNewProcess = -1;
 						switch(inputParams[1]){				
 							
 							case "PA":
 								idNewProcess = s.monitor.gp.criaProcesso(progs.PA);
-								System.out.println(idNewProcess);
+								System.out.println("id = " + idNewProcess);
 							break;
 							case "PB":
 								idNewProcess = s.monitor.gp.criaProcesso(progs.PB);
@@ -736,9 +808,8 @@ public class Sistema {
 							default:
 								System.out.println("Programa invalido ou inexistente.");
 								break;
-
 						}
-						break;			
+						break;	//break criaProcesso		
 						
 
 					case "executa":
@@ -746,7 +817,7 @@ public class Sistema {
 						s.monitor.executa(id);
 						break;
 					
-					case "dumpId":
+					case "dump":
 						id = Integer.parseInt(inputParams[1]);
 						s.monitor.dumpId(id);
 						break;
@@ -759,28 +830,50 @@ public class Sistema {
 						id = Integer.parseInt(inputParams[1]);
 						s.monitor.dumpId(id);
 						break;
-					case "dumpFrames":
-						s.monitor.dumpFrames();
+					case "dumpAllFrames":						
+						s.monitor.dumpAllFrames();//exibit todos os frames
+						break;
+					case "dumpFrame":
+						int frame = Integer.parseInt(inputParams[1]);
+						vm.gm.dumpFrame(frame);
+					case "ps":
+						s.monitor.ps();	
+						break;
+					case "exit":
+						System.out.println("Bye!");
+						SystemRun = false;
+						break;
+					case "":
 						break;
 					default:
-						System.out.println("Parametro inválido");
+						System.out.println("Parametro invalido. Verifique em READM");
 						break;
-
 
 					
 				}
+			}catch(Exception e){//excecoes de entrada. Forma interativa
+				
+				System.out.println(inputParams[0]);
+				
+				String tab =""; //deslocar as escritas de argumentos
+				while(tab.length()<=inputParams[0].length())
+					tab+=" ";
+				
+				System.out.println(tab + "^^^");
+				System.out.println(tab + "argumentos invalidos para solicitacao. Verifique em README");
+			}
 
 			}
 
 		}
-	
-		
+
 	}
 
+	
+	/*
 	/**
 	 * @deprecated
-	 * @param id
-	 */
+	 * @param id	 
 	public void roda(int id) { // metodo roda modificado
 		// Instanciar um objeto para conter a tabela de paginas desse processo. Essa
 		// tabela irá ser manipulada pelo GM
@@ -789,10 +882,10 @@ public class Sistema {
 		monitor.executa(id);
 		System.out.println("---------------------------------- após execucao ");
 		monitor.dump(vm.m, 0, 90); // Muda o total do Dump
-	}
+	}*/
 
 	public void trataTnterrupcoes(interrupt i) {
-		System.out.println("I-N-T-E-R-R-U-P-T-I-O-N");
+		System.out.print("I-N-T-E-R-R-U-P-T-I-O-N -> ");
 		if (i == interrupt.InvalidAdrress)
 			System.out.println("Acesso invalido a memoria");
 		if (i == interrupt.InvalidOpcode)
@@ -811,30 +904,8 @@ public class Sistema {
 	// ------------------- instancia e testa sistema
 	public static void main(String args[]) {
 		Sistema s = new Sistema();
-		s.vm.gm.dynamicOverridePages = false; 
-		s.vm.gm.busyFrameTest = true;
-
-		/*
-		especificar aqui programas que quer carregar
-		s.monitor.gp.criaProcesso(progs.PA);
-		*/	
-		// s.roda(progs.fibonacci10); // "progs" significa acesso/referencia ao programa
-		// em memoria secundaria
-		// s.roda(progs.progMinimo);
-		// s.roda(progs.fatorial);
-		// s.roda(progs.PB);
-		// s.roda(progs.testOverFlow);
-		// s.roda(progs.testInvalidOpcode);
-		// s.roda(progs.testInvalidAdrress);
-		// s.roda(progs.testIN);
-		// s.roda(progs.testOUT);
-		// s.roda(progs.PB);
-		// s.roda(progs.PA);
-		// s.roda(progs.PC);
-
-
-		Terminal t = s.new Terminal(s);	
-
+		s.showConfiguration();
+		s.new Terminal(s);
 	}
 
 	// -------------------------------------------------------------------------------------------------------
