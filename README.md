@@ -24,12 +24,14 @@ Outra implementacao foi a variavel ***dynamicOverridePages***,se habilitada como
 
 ## Terminal Commands
 Funções solicitadas:
-- **cria *NomeDoPrograma***: faz a alocao do processo no sistema. Retorna o Id do processo. Podem ser alocados varios processos simultaneamente
+- **cria *NomeDoPrograma***: faz a alocação do processo no sistema. Retorna o Id do processo. Podem ser alocados varios processos simultaneamente
 - **executa *id***: executa o id do processo alocado.
 - **dump *id***: Exibe os informações do processo/PCB e frames de memoria
 - **dumpM *0 1***: Exibe um dump das posicoes de memoria definidas por 0=inicio e 1=final
 - **desaloca *id***: desaloca o processo. Remove-o da lista de processos. Os frames são liberados (FrameLivre[]=true), mas o conteúdo da posição não é limpo. PoréM, o frameLivre permite ser sobreescrito
-Ex:
+
+Ex
+
 *Cuidar sensetive case*
 
 ```
