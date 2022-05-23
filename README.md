@@ -45,5 +45,9 @@ Outras funções extras:
 Ex:
 
 ```
+dumpAllFrames
 dumpFrame 2
+ps
+exit
+ 
 ```
