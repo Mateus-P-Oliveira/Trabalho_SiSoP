@@ -726,6 +726,7 @@ public class Sistema {
 			int p = posicaoSolicitada / tamFrame; // p = contagem de posicao no array da tabela
 			int offset = posicaoSolicitada % tamFrame; // offset desclocamente dentro do frame
 
+			
 			if (p >= totalFrames && this.dynamicOverridePages) { // verifica se durante a exexcução foi requisitado
 																	// algum endereco fora do escopo de paginas
 				boolean sucessNewAllocaded = alocaPaginas(1, t); // aloca nova pagina para posição
@@ -816,17 +817,38 @@ public class Sistema {
 							case "PA":
 								idNewProcess = s.monitor.gp.criaProcesso(progs.PA);
 								System.out.println("id = " + idNewProcess);
-							break;
+								break;
 							case "PB":
 								idNewProcess = s.monitor.gp.criaProcesso(progs.PB);
 								System.out.println(idNewProcess);
-							break;
+								break;
+								
+							case "PC":
+								idNewProcess = s.monitor.gp.criaProcesso(progs.PC);
+								System.out.println(idNewProcess);
+								break;
+							case "testIN":
+								idNewProcess = s.monitor.gp.criaProcesso(progs.testIN);
+								System.out.println(idNewProcess);
+								break;
+							case "testOUT":
+								idNewProcess = s.monitor.gp.criaProcesso(progs.testOUT);
+								System.out.println(idNewProcess);
+								break;
+							case "testInvalidAdrress":
+								idNewProcess = s.monitor.gp.criaProcesso(progs.testInvalidAdrress);
+								System.out.println(idNewProcess);
+								break;
+							case "testOverFlow":
+								idNewProcess = s.monitor.gp.criaProcesso(progs.testOverFlow);
+								System.out.println(idNewProcess);
+								break;
+							
 							default:
 								System.out.println("Programa invalido ou inexistente.");
 								break;
 						}
-						break;	//break criaProcesso		
-						
+						break;	//break criaProcesso							
 
 					case "executa":
 						id = Integer.parseInt(inputParams[1]);
@@ -1052,7 +1074,7 @@ public class Sistema {
 		};
 
 		public Word[] PA = new Word[]{
-			new Word(Opcode.LDI, 0, -1, -1), //Input da repeticao
+			new Word(Opcode.LDI, 0, -1, 4), //Input da repeticao
 			new Word(Opcode.LDI, 1, -1, 28),
 			new Word(Opcode.LDI, 2, -1, 0),
 			new Word(Opcode.LDI, 3, -1, 27),
