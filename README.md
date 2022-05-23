@@ -5,14 +5,14 @@ VM
  - Gerencia de Memoria
 Monitor
  - Gerenciador de Processos
-    - Process Controle Block (PCB)
+    - Process Controll Block (PCB)
 
 
 ## Compile
-javac Sistema.java
+> javac Sistema.java
 
 ## Run
-java Sistema
+> java Sistema
 
 ### Observações
 Implementados um caso de teste para comprovar o funcionamento do gerenciamento de maemoria e paginacao. 
