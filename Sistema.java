@@ -144,7 +144,8 @@ public class Sistema {
 
 						case LDX: // Rd <- [Rs] // Here
 							// m[reg[ir.r2]].opc = Opcode.DATA; //Leitura não precisa saber o que é feito
-							reg[ir.r1] = m[reg[ir.r2]].p; //Corrigido para pegar os dados internos
+							addressT = vm.gm.translate(reg[ir.r2], pagesProcess);
+							reg[ir.r1] = m[addressT].p; //Corrigido para pegar os dados internos
 							pc++;
 							break;
 
