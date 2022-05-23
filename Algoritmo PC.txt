@@ -1,46 +1,67 @@
 Algoritmo PC
-CODIGO		R1	R2	  P  	LINHA		COMENTARIO
-LDI 	    0	  -1  	31	    0		#Valor das repetições no Loop
-LDI		    1	  -1	  32	    1		#Linha do salto do jump
-LDI		    2	  -1	  20	    2		#Valor inicial que vai ser utilizado pelo LDD para puxar da memoria
-LDI		    3 	-1	  21	    3		#Valor inicial que vai ser utilziado pelo LDD para puxar da memoria
-LDI		    7	  -1	  28	    4		#Posição onde sempre vou salvar o registrador da subtração
+CODIGO		R1	R2	P  	LINHA		COMENTARIO
 #Coloca elementos no vetor
-LDI		    4	  -1	   X 	    5		#Coloca nos registradores o valor que sera usado
-STD		    4	  -1	  20 	    6		#Salva na memoria aqueles valores
-LDI		    4	  -1	   X 	    7		#Coloca nos registradores o valor que sera usado
-STD		    4	  -1	  21 	    8		#Salva na memoria aqueles valores
-LDI		    4	  -1	   X 	    9		#Coloca nos registradores o valor que sera usado
-STD		    4	  -1	  22 	    10	#Salva na memoria aqueles valores
-LDI		    4	  -1	   X 	    11	#Coloca nos registradores o valor que sera usado
-STD		    4	  -1	  23 	    12	#Salva na memoria aqueles valores
-LDI		    4	  -1	   X 	    13	#Coloca nos registradores o valor que sera usado
-STD		    4	  -1	  24 	    14	#Salva na memoria aqueles valores
-LDI		    4	  -1	   X 	    15	#Coloca nos registradores o valor que sera usado
-STD		    4	  -1	  25 	    16	#Salva na memoria aqueles valores
-LDI		    4	  -1	   X 	    17	#Coloca nos registradores o valor que sera usado
-STD		    4	  -1	  26 	    18	#Salva na memoria aqueles valores
-LDI		    4	  -1	  -1	    19	#Salvo a posição final que ira para o loop
-STD		    4	  -1	  27	    20	#Salvo na memoria onde isso ira ocorrer
-#Faz o bubbleSort do algoritmo
-JMPIL		  6	   0	  -1      21	#Se chegar na posição 27 da memoria ele ira ler o -1 e sair do loop	
-LDX		    5	  -1	   2	    22	#Puxa da memoria a posição do inicio do codigo
-LDX		    6	  -1	   3	    23	#Puxa da memoria a posição do inicio do codigo
-STD		    6	  -1	  28	    24	#Salvo na posição 27 o valor do R6
-SUB		    6	   5	  -1	    25	#Faço a comparação do Bubble Sort. Se for menor que zero faço a mudança da posição 6 = 6 - 5 < 0 o 5 é maior que o 6
-JMPIL		  6	   1  	-1	    26	#Se for menor que zero salto para a troca
-LDX		    6	  -1	   7	    27	#Puxa da memoria a posição que salvei o registrador que foi atualizado
-ADDI		  2	  -1	   1	    28	#Mover na posição da memoria
-ADDI		  3 	-1	   1	    29	#Mover na posição da memoria
-JMP		   -1	  -1	  21	    30	#Pula para o inicio desse loop
-#Paro o programa
-STOP		-1	  -1	  -1	    31	#Para o programa
-#Faz o swap
-LDX		   6	  -1	   7	    32	#Puxa da memoria a posição que salvei o registrador que foi atualizado
-STX		   2	   6	  -1      33	#Salva na memoria o valor menor
-STX		   3	   5	  -1	    34	#Salva na memoria o valor maior
-ADDI		 2	  -1	   1	    35	#Mover na posição da memoria
-ADDI		 3	  -1	   1	    36	#Mover na posição da memoria
-JMP		  -1	  -1	  21      37	#Pula de volta para o loop realizar os testes de bubble sort
-#STOP caso de problema no JUMP
-STOP		-1	  -1	  -1	    38	#Para o programa
+LDI		0	-1	  X 	0		#Coloca nos registradores o valor que sera usado
+STD		0	-1	 60 	1		#Salva na memoria aqueles valores
+LDI		0	-1	  X 	2		#Coloca nos registradores o valor que sera usado
+STD		0	-1	 61 	3		#Salva na memoria aqueles valores
+LDI		0	-1	  X 	4		#Coloca nos registradores o valor que sera usado
+STD		0	-1	 62 	5		#Salva na memoria aqueles valores
+LDI		0	-1	  X 	6		#Coloca nos registradores o valor que sera usado
+STD		0	-1	 63 	7		#Salva na memoria aqueles valores
+LDI		0	-1	  X 	8		#Coloca nos registradores o valor que sera usado
+STD		0	-1	 64 	9		#Salva na memoria aqueles valores
+LDI		0	-1	  X 	10		#Coloca nos registradores o valor que sera usado
+STD		0	-1	 65 	11		#Salva na memoria aqueles valores
+LDI		0	-1	  X 	12		#Coloca nos registradores o valor que sera usado
+STD		0	-1	 66 	13		#Salva na memoria aqueles valores
+LDI		0	-1	 -1	14		#Salvo a posição final que ira para o loop
+STD		0	-1	 67	15		#Salvo na memoria onde isso ira ocorrer
+#Pega o tamanho do vetor
+LDI		8	-1	  V	16		#Tamanho do vetor externo
+LDI		9	-1	  2	17		#Valor da multiplicação
+MULT		8	 9	  -1	18		#Multiplica por 2
+ADDI		8	-1	  1	19		#Soma mais 1
+LDI		9	-1	  52	20		#Salto do JMPIE
+#Loop externo
+SUBI		8	-1	  1	21		#Diminui 1
+JMPIE		9	 8	  -1	22		#Termina o loop se for igual a 0
+#Associa os Registradores
+LDI 		0	-1	60	23		#Fn posição
+LDI		7	-1	61	24		#Fn1 posição
+LDI		1	-1	51	25		#Linha do salto do jump
+LDX		2	 0	-1	26		#Fn dado
+LDX		3 	 7	-1	27		#Fn+1 dado
+LDI		4	-1	0	28		#Reg de Swap
+LDI		5	-1	46	29		#Linha do JMP para o Bubble sort
+LDI		6	-1	V	30		#Tamanho do vetor								
+#Faço loop igual a V+1 
+ADDI		6	-1	2	31		#Faço loop 6+2 #Faço isso pois irei ter um loop a menos devido a forma que montei o codigo 
+JMP		-1	-1	35	32
+#Mover pelo loop
+ADDI		0	-1	1	33		#Avanço na memoria
+ADDI		7	-1	1	34		#Avanço na memoria
+LDX		2	 0	-1	35		#Fn dado
+LDX		3 	 7	-1	36		#Fn+1 dado
+SUBI		6	-1	1	37		#Entrei no loop diminuo 1
+LDI		4	 -1     0    	38		#Zero o R4
+ADD		4	 2     -1	39		#Salvo Fn em outro reg
+JMPIE		1	 6     -1	40		#Saio do programa pois terminei o bubble sort
+SUB		2	 3     -1 	41		#Fn= Fn - Fn+1
+JMPIG		5	 2     -1	42		#Pulo para o bubble sort se ver que a diferença entre eles for positiva
+LDI		2	 -1	0	43		#Zero Fn
+ADD		2	 4     -1	44		#Salvo Fn
+JMP		-1	-1	33	45		#Pulo para o inicio do loop
+#Bubble Sort
+STX		0	3	-1      46		#Salvo Fn+1 no lugar do Fn na memoria
+STX		7	4	-1	47		#Salvo Fn no lugar do Fn+1 na memoria
+LDI		2	 -1	0	48		#Zero Fn
+ADD		2	 4     -1	49		#Salvo Fn
+JMP		-1	 -1	33	50		#Pulo de volta para o loop
+#Termino o programa
+JMP		-1	-1	21	51
+#Termina o programa	
+STOP		-1	-1	 -1     52		#Para o programa
+
+	 
+
