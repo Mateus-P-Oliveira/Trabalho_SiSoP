@@ -9,10 +9,10 @@ Monitor
 
 
 ## Compile
-javac Sistema.java
+> javac Sistema.java
 
 ## Run
-java Sistema
+> java Sistema
 
 ### Observações
 Implementados um caso de teste para comprovar o funcionamento do gerenciamento de maemoria e paginacao. 
