@@ -5,7 +5,7 @@ VM
  - Gerencia de Memoria
 Monitor
  - Gerenciador de Processos
-    - Process Controle Block (PCB)
+    - Process Controll Block (PCB)
 
 
 ## Compile
