@@ -144,7 +144,7 @@ public class Sistema {
 
 						case LDX: // Rd <- [Rs] // Here
 							// m[reg[ir.r2]].opc = Opcode.DATA; //Leitura não precisa saber o que é feito
-							reg[ir.r1] = reg[ir.r2]; // Depois ver com o professor
+							reg[ir.r1] = m[reg[ir.r2]].p; //Corrigido para pegar os dados internos
 							pc++;
 							break;
 
