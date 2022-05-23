@@ -510,6 +510,120 @@ public class Sistema {
 
 	}
 	// -------------------------------------------
+	/**
+	 * Gerenciador de processos
+	 */
+	public class GP {
+
+		/**
+		 * ListProcess = lista com todos os processos criados que estão em memoria
+		 */
+		ArrayList<PCB> ListProcess = new ArrayList<PCB>();
+		int uniqueId = 0;
+
+		public int getUniqueId(){
+			int idReturn = this.uniqueId;
+			this.uniqueId++;
+			return idReturn;
+		}
+		
+
+		/**
+		 * 
+		 * Metodo para criação de processo
+		 * 
+		 * @param programa
+
+		 * @return true: alocação com sucesso
+		 * @return false: alocação falhou
+		 */
+		public int criaProcesso(Word[] programa) {
+			int programSize = programa.length;
+			if (programSize > vm.tamMem)
+				return -1; // verifica o tamanho do programa
+
+			GM.tabelaPaginaProcesso newPages = vm.gm.new tabelaPaginaProcesso();
+			boolean sucessAlocation = vm.gm.alocaPaginas(programSize, newPages); // faz alocação dad paginas
+			if (sucessAlocation) {
+				int id = getUniqueId(); // id igual o ultimo tamanho do array de processos
+				monitor.carga(programa, vm.m, newPages);
+				PCB P = new PCB(id, 0, newPages);
+				ListProcess.add(P);
+				return id;
+			}
+
+			return -1;
+
+		}
+
+		public void desalocaProcesso(int id) {
+			for (int i = 0; i < ListProcess.size(); i++) {
+				PCB Process = ListProcess.get(i);
+				if (Process.id == id) {
+					// remover de todas as listas
+					for(Integer framePos : Process.tPaginaProcesso.tabela){ //desaloca os frames ocupados
+						vm.gm.frameLivre[framePos] = true;
+					}
+					ListProcess.remove(Process);
+
+				}
+			}
+		}
+
+		////////////////////////////////////
+		// ---------------PCB----------------/
+
+		public class PCB {
+			private int id;
+			private int pcContext;
+			private STATE state;
+			private GM.tabelaPaginaProcesso tPaginaProcesso;
+
+			public PCB(int id, int pc, GM.tabelaPaginaProcesso tPaginaProcesso) {
+				this.id = id;
+				this.pcContext = pc;
+				this.tPaginaProcesso = tPaginaProcesso;
+				this.state = STATE.READY;
+			}
+
+			public int getId() {
+				return this.id;
+			}
+
+			public int getPc() {
+				return this.pcContext;
+			}
+
+			public void setPc(int newPc) {
+				this.pcContext = newPc;
+			}
+
+			public void setState(STATE state){
+				this.state = state;
+			}
+			public STATE getState(){
+				return this.state;
+			}
+			
+			public String getStateString(){
+				switch (this.state) {
+					case READY:
+						return "Ready";
+					case RUNNING:
+						return "Running";
+					default:
+						return "STATE FAILED!";					
+					
+				}
+			}
+
+			public GM.tabelaPaginaProcesso getTPaginaProcesso() {
+				return this.tPaginaProcesso;
+
+			}
+
+		}
+	}
 
 	public class GM {
 		int tamMem;
@@ -661,120 +775,7 @@ public class Sistema {
 		RUNNING, 
 		READY;
 	}
-	/**
-	 * Gerenciador de processos
-	 */
-	public class GP {
-
-		/**
-		 * ListProcess = lista com todos os processos criados que estão em memoria
-		 */
-		ArrayList<PCB> ListProcess = new ArrayList<PCB>();
-		int uniqueId = 0;
-
-		public int getUniqueId(){
-			int idReturn = this.uniqueId;
-			this.uniqueId++;
-			return idReturn;
-		}
-		
-
-		/**
-		 * 
-		 * Metodo para criação de processo
-		 * 
-		 * @param programa
-
-		 * @return true: alocação com sucesso
-		 * @return false: alocação falhou
-		 */
-		public int criaProcesso(Word[] programa) {
-			int programSize = programa.length;
-			if (programSize > vm.tamMem)
-				return -1; // verifica o tamanho do programa
-
-			GM.tabelaPaginaProcesso newPages = vm.gm.new tabelaPaginaProcesso();
-			boolean sucessAlocation = vm.gm.alocaPaginas(programSize, newPages); // faz alocação dad paginas
-			if (sucessAlocation) {
-				int id = getUniqueId(); // id igual o ultimo tamanho do array de processos
-				monitor.carga(programa, vm.m, newPages);
-				PCB P = new PCB(id, 0, newPages);
-				ListProcess.add(P);
-				return id;
-			}
-
-			return -1;
-
-		}
-
-		public void desalocaProcesso(int id) {
-			for (int i = 0; i < ListProcess.size(); i++) {
-				PCB Process = ListProcess.get(i);
-				if (Process.id == id) {
-					// remover de todas as listas
-					for(Integer framePos : Process.tPaginaProcesso.tabela){ //desaloca os frames ocupados
-						vm.gm.frameLivre[framePos] = true;
-					}
-					ListProcess.remove(Process);
-
-				}
-			}
-		}
-
-		////////////////////////////////////
-		// ---------------PCB----------------/
-
-		public class PCB {
-			private int id;
-			private int pcContext;
-			private STATE state;
-			private GM.tabelaPaginaProcesso tPaginaProcesso;
-
-			public PCB(int id, int pc, GM.tabelaPaginaProcesso tPaginaProcesso) {
-				this.id = id;
-				this.pcContext = pc;
-				this.tPaginaProcesso = tPaginaProcesso;
-				this.state = STATE.READY;
-			}
-
-			public int getId() {
-				return this.id;
-			}
-
-			public int getPc() {
-				return this.pcContext;
-			}
-
-			public void setPc(int newPc) {
-				this.pcContext = newPc;
-			}
-
-			public void setState(STATE state){
-				this.state = state;
-			}
-			public STATE getState(){
-				return this.state;
-			}
-			
-			public String getStateString(){
-				switch (this.state) {
-					case READY:
-						return "Ready";
-					case RUNNING:
-						return "Running";
-					default:
-						return "STATE FAILED!";					
-					
-				}
-			}
-
-			public GM.tabelaPaginaProcesso getTPaginaProcesso() {
-				return this.tPaginaProcesso;
-
-			}
-
-		}
-	}
+	
 
 	// -------------------------------------------------------------------------------------------------------
 	// ------------------- S I S T E M A
