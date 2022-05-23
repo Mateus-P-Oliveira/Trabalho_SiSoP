@@ -432,7 +432,6 @@ public class Sistema {
 			for (int i = 0; i < vm.nroFrames; i++) {
 				System.out.println("----------------------------");
 				System.out.println("FRAME " + i + ":");
-				System.out.println("Frame Livre = " + vm.gm.frameLivre[i]);
 
 				vm.gm.dumpFrame(i);
 
