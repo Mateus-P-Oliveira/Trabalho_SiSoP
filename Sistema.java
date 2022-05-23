@@ -1050,76 +1050,108 @@ public class Sistema {
 				new Word(Opcode.STOP, -1, -1, -1),
 		};
 
-		public Word[] PA = new Word[] {
-
-				new Word(Opcode.LDI, 0, -1, 4),
-				new Word(Opcode.LDI, 1, -1, 15),
-				new Word(Opcode.LDI, 2, -1, -1),
-				new Word(Opcode.LDI, 3, -1, 14),
-				new Word(Opcode.LDI, 4, -1, 1),
-				new Word(Opcode.LDI, 5, -1, 17),
-				// JMP para testar o zero
-				new Word(Opcode.JMPIL, 1, 0, -1),
-				// Loop Fibonacci
-				new Word(Opcode.JMPIE, 3, 0, -1),
-				new Word(Opcode.STX, 5, 4, -1),
-				new Word(Opcode.ADDI, 5, -1, 1),
-				new Word(Opcode.LDX, 6, 4, -1),
-				new Word(Opcode.ADD, 4, 6, -1),
-				new Word(Opcode.SUBI, 0, -1, 1),
-				new Word(Opcode.JMP, -1, -1, 7),
-				// Fim do programa caso tenha tido sequencia
-				new Word(Opcode.STOP, -1, -1, -1),
-				// Fim do programa caso tenha sido um zero
-				new Word(Opcode.STD, 2, -1, 17),
-				new Word(Opcode.STOP, -1, -1, -1)
+		public Word[] PA = new Word[]{
+			new Word(Opcode.LDI, 0, -1, -1), //Input da repeticao
+			new Word(Opcode.LDI, 1, -1, 28),
+			new Word(Opcode.LDI, 2, -1, 0),
+			new Word(Opcode.LDI, 3, -1, 27),
+			new Word(Opcode.LDI, 4, -1, 1),
+			new Word(Opcode.LDI, 5, -1, 32),
+			//JMP Teste do zero
+			new Word(Opcode.JMPIL, 1, 0, -1),
+			new Word(Opcode.LDI, 6, -1, 0),
+			new Word(Opcode.STX, 5, 6, -1),
+			new Word(Opcode.ADDI, 5, -1, 1),
+			new Word(Opcode.SUBI, 0, -1, 1),
+			new Word(Opcode.JMPIE, 3, 0, -1),
+			new Word(Opcode.STX, 5, 4, -1),
+			new Word(Opcode.ADDI, 5, -1, 1),
+			new Word(Opcode.SUBI, 0, -1, 1),
+			//LOOP Fibonacci
+			new Word(Opcode.JMPIE, 3, 0, -1),
+			new Word(Opcode.SUBI, 0, -1, 1),
+			new Word(Opcode.ADD, 6, 4, -1),
+			new Word(Opcode.STX, 5, 6, -1),
+			new Word(Opcode.ADDI, 5, -1, 1),
+			new Word(Opcode.LDI, 2, -1, 0),
+			new Word(Opcode.ADD, 2, 6, -1),
+			new Word(Opcode.LDI, 6, -1, 0),
+			new Word(Opcode.ADD, 6, 4, -1),
+			new Word(Opcode.LDI, 4, -1, 0),
+			new Word(Opcode.ADD, 4, 2, -1),
+			new Word(Opcode.JMP, -1, -1, 15),
+			//Fim do programa 
+			new Word(Opcode.STOP, -1, -1, -1),
+			//Fim do programa se for um zero
+			new Word(Opcode.LDI, 2, -1, -1),
+			new Word(Opcode.STD, 2, -1, 32),
+			new Word(Opcode.STOP, -1, -1, -1)
 		};
 
-		public Word[] PC = new Word[] {
-				new Word(Opcode.LDI, 0, -1, 31),
-				new Word(Opcode.LDI, 1, -1, 32),
-				new Word(Opcode.LDI, 2, -1, 40),
-				new Word(Opcode.LDI, 3, -1, 41),
-				new Word(Opcode.LDI, 4, -1, 48),
-				// coloca elementos no vetor
-				new Word(Opcode.LDI, 4, -1, 8),
-				new Word(Opcode.STD, 4, -1, 40),
-				new Word(Opcode.LDI, 4, -1, 7),
-				new Word(Opcode.STD, 4, -1, 41),
-				new Word(Opcode.LDI, 4, -1, 6),
-				new Word(Opcode.STD, 4, -1, 42),
-				new Word(Opcode.LDI, 4, -1, 5),
-				new Word(Opcode.STD, 4, -1, 43),
-				new Word(Opcode.LDI, 4, -1, 4),
-				new Word(Opcode.STD, 4, -1, 44),
-				new Word(Opcode.LDI, 4, -1, 3),
-				new Word(Opcode.STD, 4, -1, 45),
-				new Word(Opcode.LDI, 4, -1, 2),
-				new Word(Opcode.STD, 4, -1, 46),
-				new Word(Opcode.LDI, 4, -1, 1),
-				new Word(Opcode.STD, 4, -1, 47),
-				// Faz o bubble sort do Algoritmo
-				new Word(Opcode.JMPIL, 6, 0, -1),
-				new Word(Opcode.LDX, 5, -1, 2),
-				new Word(Opcode.LDX, 6, -1, 3),
-				new Word(Opcode.STD, 6, -1, 48),
-				new Word(Opcode.SUB, 5, 5, -1),
-				new Word(Opcode.JMPIL, 6, 1, -1),
-				new Word(Opcode.LDX, 6, -1, 7),
-				new Word(Opcode.ADDI, 2, -1, 1),
-				new Word(Opcode.ADDI, 3, -1, 1),
-				new Word(Opcode.JMP, -1, -1, 21),
-				// Para o progama
-				new Word(Opcode.STOP, -1, -1, -1),
-				// Faz o swap
-				new Word(Opcode.LDX, 6, -1, 7),
-				new Word(Opcode.STX, 2, 6, -1),
-				new Word(Opcode.STX, 3, 5, -1),
-				new Word(Opcode.ADDI, 2, -1, 1),
-				new Word(Opcode.ADDI, 3, -1, 1),
-				new Word(Opcode.JMP, -1, -1, 21),
-				// Stop caso de problema no jump
-				new Word(Opcode.STOP, -1, -1, -1)
+		public Word[] PC =new Word[]{
+			//coloca elementos no vetor
+			new Word(Opcode.LDI, 0, -1, 8),
+			new Word(Opcode.STD, 0, -1, 60),
+			new Word(Opcode.LDI, 0, -1, 7),
+			new Word(Opcode.STD, 0, -1, 61),
+			new Word(Opcode.LDI, 0, -1, 6),
+			new Word(Opcode.STD, 0, -1, 62),
+			new Word(Opcode.LDI, 0, -1, 5),
+			new Word(Opcode.STD, 0, -1, 63),
+			new Word(Opcode.LDI, 0, -1, 4),
+			new Word(Opcode.STD, 0, -1, 64),
+			new Word(Opcode.LDI, 0, -1, 3),
+			new Word(Opcode.STD, 0, -1, 65),
+			new Word(Opcode.LDI, 0, -1, 2),
+			new Word(Opcode.STD, 0, -1, 66),
+			new Word(Opcode.LDI, 0, -1, 1),
+			new Word(Opcode.STD, 0, -1, 67),
+			//Pega o tamanho do vetor
+			new Word(Opcode.LDI, 8, -1, 8),//Tamanho do vetor
+			new Word(Opcode.LDI, 9, -1, 2),
+			new Word(Opcode.MULT, 8, 9, -1),
+			new Word(Opcode.ADDI, 8, -1, 1),//Repeticoes
+			new Word(Opcode.LDI, 9, -1, 52),
+			//Loop Externo
+			new Word(Opcode.SUBI, 8, -1, 1),
+			new Word(Opcode.JMPIE, 9, 8, -1),
+			//Associa os Reg
+			new Word(Opcode.LDI, 0, -1, 60),
+			new Word(Opcode.LDI, 7, -1, 61),
+			new Word(Opcode.LDI, 1, -1, 51),
+			new Word(Opcode.LDX, 2, 0, -1),
+			new Word(Opcode.LDX, 3, 7, -1),
+			new Word(Opcode.LDI, 4, -1, 0),
+			new Word(Opcode.LDI, 5, -1, 46),
+			new Word(Opcode.LDI, 6, -1, 8), //Tamanho do vetor
+			//Aumento o vetor
+			new Word(Opcode.ADDI, 6, -1, 0),
+			new Word(Opcode.JMP, -1, -1, 35),
+			//Loop principal
+			new Word(Opcode.ADDI, 0, -1, 1),
+			new Word(Opcode.ADDI, 7, -1, 1),
+			new Word(Opcode.LDX, 2, 0, -1),
+			new Word(Opcode.LDX, 3, 7, -1),
+			new Word(Opcode.SUBI, 6, -1, 1),
+			new Word(Opcode.LDI, 4, -1, 0),
+			new Word(Opcode.ADD, 4, 2, -1),
+			new Word(Opcode.JMPIE, 1, 6, -1),
+			new Word(Opcode.SUB, 2, 3, -1),
+			new Word(Opcode.JMPIG, 5, 2, -1),
+			new Word(Opcode.LDI, 2, -1, 0),
+			new Word(Opcode.ADD, 2, 4, -1),
+			new Word(Opcode.JMP, -1, -1, 33),
+			//Bubble Sort
+			new Word(Opcode.STX, 0, 3, -1),
+			new Word(Opcode.STX, 7, 4, -1),
+			new Word(Opcode.LDI, 2, -1, 0),
+			//new Word(Opcode.LDI, 4, -1, 0),
+			new Word(Opcode.ADD, 2, 4, -1),
+			new Word(Opcode.JMP, -1, -1, 33),
+			//JMP para o loop externo
+			new Word(Opcode.JMP, -1, -1, 21),
+			//FIM DO PROGRAMA
+			new Word(Opcode.STOP, -1, -1, -1)
 		};
 
 	}
