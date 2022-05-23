@@ -1,5 +1,9 @@
 # Trabalho_SiSoP
 Trabalho Sistemas Operacionais
+Nomes:
+Gilberto Luis Koerbes Junior
+Mateus Pinto de Oliveira
+Nathan Jeske Espindola
 
 VM
  - Gerencia de Memoria
