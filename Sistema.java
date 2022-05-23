@@ -510,157 +510,6 @@ public class Sistema {
 
 	}
 	// -------------------------------------------
-
-	public class GM {
-		int tamMem;
-		int tamFrame;
-		boolean frameLivre[];
-
-		/**
-		 * habilita a alocação de paginas durante execução PODE GERAR SOBRESCRITA! \n
-		 * Ex: caso o programa tente acessar uma posição de memória ou pagina que não é
-		 * sua, é verificado se está disponivel.
-		 * Se disponivel, ira alocar uma nova pagina para o processo poder prosseguir
-		 * 
-		 * @return "Um aviso de nova alocação é informado"
-		 */
-		public boolean dynamicOverridePages = true;
-
-		/**
-		 * Variavel para simular sem programas a ocupacao de frames de forma intercala.
-		 * {@literal} Objetivo: mostrar e comprovar o comportamento do sistema.
-		 * 
-		 */
-		public boolean busyFrameTest = true;
-
-		public GM(int tamMem, int tamFrame) {
-			this.tamFrame = tamFrame;
-			this.tamMem = tamMem;
-
-			int nroFrames = tamMem / tamFrame;
-			frameLivre = new boolean[nroFrames]; // seta o tamanho do array de frame
-
-			if (busyFrameTest) {
-			System.out.println("*BUSY FRAME TEST ACTIVE!"); //avisa sobre o teste ativo
-			System.out.println("Frames alocados como ocupados: ");
-			}
-			for (int i = 0; i < nroFrames; i++) {// inicia todos os frames em true
-				frameLivre[i] = true;
-
-				if (i % 2 == 0 && busyFrameTest) {
-					System.out.print(" | " + i );
-					frameLivre[i] = false; // test case
-				}
-			}
-
-		}
-
-		public boolean alocaPaginas(int nroPalavras, tabelaPaginaProcesso paginas) {
-			int nroframeslivre = 0; // verifica o total de frames livres
-			int paginasRequeridas = nroPalavras / this.tamFrame;
-
-			int offset = nroPalavras % this.tamFrame; //caso haja divisao quebrada, necessita mais uma pagina
-			if(offset!=0) paginasRequeridas++;
-
-			for (boolean b : frameLivre) { // calculando frames livres
-				if (b == true)
-					nroframeslivre++;
-			}
-
-			if (paginasRequeridas <= nroframeslivre) { // verifica se há todos os frames necessários, se houve, ira
-														// carrega-los
-
-				while (paginasRequeridas >= 0) { // aloca frames enquanto necessario
-
-					for (int i = 0; i < frameLivre.length; i++) {// iterar sobre o array de frames
-						if (frameLivre[i] == true) {
-							frameLivre[i] = false;
-							paginas.tabela.add(i); // adiciona o frame 'i' no vetor das paginas do processo
-							paginasRequeridas--;
-							break;
-						}
-					}
-				}
-				return true;
-			}
-
-			return false;
-		}
-
-		public void desalocaPaginas(tabelaPaginaProcesso paginas) {
-			for (int p : paginas.tabela) {
-				frameLivre[p] = true;
-			}
-
-		}
-
-		public void dumpFrame(int frame) {
-			System.out.println("FrameLivre: " + vm.gm.frameLivre[frame]);
-
-			int pInicio = frame * vm.tamFrame;
-			int pFim = pInicio + tamFrame;
-			monitor.dump(vm.m, pInicio, pFim);
-		}
-
-		/**
-		 * Tradutor do endereco lógico
-		 * input: object tabela / int endereco logico
-		 * * @return int posicao real na memoria
-		 */
-		public int translate(int posicaoSolicitada, tabelaPaginaProcesso t) {
-			int totalFrames = t.tabela.size();
-			int p = posicaoSolicitada / tamFrame; // p = contagem de posicao no array da tabela
-			int offset = posicaoSolicitada % tamFrame; // offset desclocamente dentro do frame
-
-			if (p >= totalFrames && this.dynamicOverridePages) { // verifica se durante a exexcução foi requisitado
-																	// algum endereco fora do escopo de paginas
-				boolean sucessNewAllocaded = alocaPaginas(1, t); // aloca nova pagina para posição
-				if (sucessNewAllocaded) {
-					System.out.println("warning: new page is allocated");
-				} else {
-					vm.cpu.interrupcaoAtiva = interrupt.InvalidAdrress; // se nao conseguiu alocar, retorna problema de
-																		// acesso a memoria
-				}
-			}
-
-			int frameInMemory = t.tabela.get(p); // obtem no indice de paginas o frame real da memoria
-			int positionInMemory = tamFrame * frameInMemory + offset;
-
-			return positionInMemory;
-		}
-
-		/**
-		 * Tabela das paginas do processos
-		 */
-		public class tabelaPaginaProcesso { // classe para modulalizar como objeto as tabelas. Cada processo possui sua
-			// tabela
-			ArrayList<Integer> tabela;
-
-			public tabelaPaginaProcesso() {
-				tabela = new ArrayList<>();
-			}
-
-			@Override
-			public String toString() {
-				String output = "";
-				for (Integer i : tabela) {
-					output += " | " + i + " | ";
-				}
-
-				return output;
-			}
-
-		}
-
-	}
-	/**
-	 * States do processo, utilizado por GP
-	 * @see Sistema.GP
-	 */
-	public enum STATE{
-		RUNNING, 
-		READY;
-	}
 	/**
 	 * Gerenciador de processos
 	 */
@@ -776,6 +625,159 @@ public class Sistema {
 		}
 	}
 
+	public class GM {
+		int tamMem;
+		int tamFrame;
+		boolean frameLivre[];
+
+		/**
+		 * habilita a alocação de paginas durante execução PODE GERAR SOBRESCRITA! \n
+		 * Ex: caso o programa tente acessar uma posição de memória ou pagina que não é
+		 * sua, é verificado se está disponivel.
+		 * Se disponivel, ira alocar uma nova pagina para o processo poder prosseguir
+		 * 
+		 * @return "Um aviso de nova alocação é informado"
+		 */
+		public boolean dynamicOverridePages = true;
+
+		/**
+		 * Variavel para simular sem programas a ocupacao de frames de forma intercala.
+		 * {@literal} Objetivo: mostrar e comprovar o comportamento do sistema.
+		 * 
+		 */
+		public boolean busyFrameTest = true;
+
+		public GM(int tamMem, int tamFrame) {
+			this.tamFrame = tamFrame;
+			this.tamMem = tamMem;
+
+			int nroFrames = tamMem / tamFrame;
+			frameLivre = new boolean[nroFrames]; // seta o tamanho do array de frame
+
+			if (busyFrameTest) {
+			System.out.println("*BUSY FRAME TEST ACTIVE!"); //avisa sobre o teste ativo
+			System.out.println("Frames alocados como ocupados: ");
+			}
+			for (int i = 0; i < nroFrames; i++) {// inicia todos os frames em true
+				frameLivre[i] = true;
+
+				if (i % 2 == 0 && busyFrameTest) {
+					System.out.print(" | " + i );
+					frameLivre[i] = false; // test case
+				}
+			}
+
+		}
+
+		public boolean alocaPaginas(int nroPalavras, tabelaPaginaProcesso paginas) {
+			int nroframeslivre = 0; // verifica o total de frames livres
+			int paginasRequeridas = nroPalavras / this.tamFrame;
+
+			int offset = nroPalavras % this.tamFrame; //caso haja divisao quebrada, necessita mais uma pagina
+			if(offset!=0) paginasRequeridas++;
+
+			for (boolean b : frameLivre) { // calculando frames livres
+				if (b == true)
+					nroframeslivre++;
+			}
+
+			if (paginasRequeridas <= nroframeslivre) { // verifica se há todos os frames necessários, se houve, ira
+														// carrega-los
+
+				while (paginasRequeridas >= 0) { // aloca frames enquanto necessario
+
+					for (int i = 0; i < frameLivre.length; i++) {// iterar sobre o array de frames
+						if (frameLivre[i] == true) {
+							frameLivre[i] = false;
+							paginas.tabela.add(i); // adiciona o frame 'i' no vetor das paginas do processo
+							paginasRequeridas--;
+							break;
+						}
+					}
+				}
+				return true;
+			}
+
+			return false;
+		}
+
+		public void desalocaPaginas(tabelaPaginaProcesso paginas) {
+			for (int p : paginas.tabela) {
+				frameLivre[p] = true;
+			}
+
+		}
+
+		public void dumpFrame(int frame) {
+			System.out.println("FrameLivre: " + vm.gm.frameLivre[frame]);
+
+			int pInicio = frame * vm.tamFrame;
+			int pFim = pInicio + tamFrame;
+			monitor.dump(vm.m, pInicio, pFim);
+		}
+
+		/**
+		 * Tradutor do endereco lógico
+		 * input: object tabela / int endereco logico
+		 * * @return int posicao real na memoria
+		 */
+		public int translate(int posicaoSolicitada, tabelaPaginaProcesso t) {
+			int totalFrames = t.tabela.size();
+			int p = posicaoSolicitada / tamFrame; // p = contagem de posicao no array da tabela
+			int offset = posicaoSolicitada % tamFrame; // offset desclocamente dentro do frame
+
+			
+			if (p >= totalFrames && this.dynamicOverridePages) { // verifica se durante a exexcução foi requisitado
+																	// algum endereco fora do escopo de paginas
+				boolean sucessNewAllocaded = alocaPaginas(1, t); // aloca nova pagina para posição
+				if (sucessNewAllocaded) {
+					System.out.println("warning: new page is allocated");
+				} else {
+					vm.cpu.interrupcaoAtiva = interrupt.InvalidAdrress; // se nao conseguiu alocar, retorna problema de
+																		// acesso a memoria
+				}
+			}
+
+			int frameInMemory = t.tabela.get(p); // obtem no indice de paginas o frame real da memoria
+			int positionInMemory = tamFrame * frameInMemory + offset;
+
+			return positionInMemory;
+		}
+
+		/**
+		 * Tabela das paginas do processos
+		 */
+		public class tabelaPaginaProcesso { // classe para modulalizar como objeto as tabelas. Cada processo possui sua
+			// tabela
+			ArrayList<Integer> tabela;
+
+			public tabelaPaginaProcesso() {
+				tabela = new ArrayList<>();
+			}
+
+			@Override
+			public String toString() {
+				String output = "";
+				for (Integer i : tabela) {
+					output += " | " + i + " | ";
+				}
+
+				return output;
+			}
+
+		}
+
+	}
+	/**
+	 * States do processo, utilizado por GP
+	 * @see Sistema.GP
+	 */
+	public enum STATE{
+		RUNNING, 
+		READY;
+	}
+	
+
 	// -------------------------------------------------------------------------------------------------------
 	// ------------------- S I S T E M A
 	// --------------------------------------------------------------------
@@ -815,17 +817,38 @@ public class Sistema {
 							case "PA":
 								idNewProcess = s.monitor.gp.criaProcesso(progs.PA);
 								System.out.println("id = " + idNewProcess);
-							break;
+								break;
 							case "PB":
 								idNewProcess = s.monitor.gp.criaProcesso(progs.PB);
 								System.out.println(idNewProcess);
-							break;
+								break;
+								
+							case "PC":
+								idNewProcess = s.monitor.gp.criaProcesso(progs.PC);
+								System.out.println(idNewProcess);
+								break;
+							case "testIN":
+								idNewProcess = s.monitor.gp.criaProcesso(progs.testIN);
+								System.out.println(idNewProcess);
+								break;
+							case "testOUT":
+								idNewProcess = s.monitor.gp.criaProcesso(progs.testOUT);
+								System.out.println(idNewProcess);
+								break;
+							case "testInvalidAdrress":
+								idNewProcess = s.monitor.gp.criaProcesso(progs.testInvalidAdrress);
+								System.out.println(idNewProcess);
+								break;
+							case "testOverFlow":
+								idNewProcess = s.monitor.gp.criaProcesso(progs.testOverFlow);
+								System.out.println(idNewProcess);
+								break;
+							
 							default:
 								System.out.println("Programa invalido ou inexistente.");
 								break;
 						}
-						break;	//break criaProcesso		
-						
+						break;	//break criaProcesso							
 
 					case "executa":
 						id = Integer.parseInt(inputParams[1]);
@@ -1051,7 +1074,7 @@ public class Sistema {
 		};
 
 		public Word[] PA = new Word[]{
-			new Word(Opcode.LDI, 0, -1, -1), //Input da repeticao
+			new Word(Opcode.LDI, 0, -1, 4), //Input da repeticao
 			new Word(Opcode.LDI, 1, -1, 28),
 			new Word(Opcode.LDI, 2, -1, 0),
 			new Word(Opcode.LDI, 3, -1, 27),
