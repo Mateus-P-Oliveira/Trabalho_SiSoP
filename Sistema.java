@@ -48,7 +48,7 @@ public class Sistema {
 	}
 
 	public enum interrupt { // interrupcoes da CPU
-		None, Overflow, InvalidOpcode, InvalidAdrress, Stop;
+		None, Overflow, InvalidOpcode, InvalidAdrress, Stop, Timer;
 	}
 
 	public class CPU {
@@ -57,13 +57,17 @@ public class Sistema {
 		private Word ir; // instruction register,
 		private int[] reg; // registradores da CPU
 
-		interrupt interrupcaoAtiva;
-		// private boolean[] interrup = new boolean[5]; // {__,1-Overflow,2-}
+		interrupt interrupcaoAtiva; // interrupcao a ser guardada pelo processador;
+		int DeltaTimer; //Varial para simultar o Timer para interrupção TIMER no processado
+		
 
 		private Word[] m; // CPU acessa MEMORIA, guarda referencia 'm' a ela. memoria nao muda. ee sempre
 							// a mesma.
 		GM.tabelaPaginaProcesso pagesProcess;
 		STATE state;
+
+
+		//=//=//=//=//=//=//=//=//=//=//=//=//=//=//=//=//=
 
 		public CPU(Word[] _m) { // ref a MEMORIA e interrupt handler passada na criacao da CPU
 			m = _m; // usa o atributo 'm' para acessar a memoria.
@@ -105,6 +109,7 @@ public class Sistema {
 
 		private void resetInterrupt() {
 			interrupcaoAtiva = interrupt.None;
+			DeltaTimer = 5;
 		}
 
 		public void run() { // execucao da CPU supoe que o contexto da CPU, vide acima, esta devidamente
@@ -144,8 +149,7 @@ public class Sistema {
 
 						case LDX: // Rd <- [Rs] // Here
 							// m[reg[ir.r2]].opc = Opcode.DATA; //Leitura não precisa saber o que é feito
-							addressT = vm.gm.translate(reg[ir.r2], pagesProcess);
-							reg[ir.r1] = m[addressT].p; //Corrigido para pegar os dados internos
+							reg[ir.r1] = m[reg[ir.r2]].p; //Corrigido para pegar os dados internos
 							pc++;
 							break;
 
@@ -307,6 +311,10 @@ public class Sistema {
 														// vetor
 					interrupcaoAtiva = interrupt.InvalidAdrress;
 				}
+				//Decremento do timer
+				DeltaTimer--;
+				if(DeltaTimer==0)
+					interrupcaoAtiva = interrupcaoAtiva.Timer;
 				// VERIFICA INTERRUPÇÃO !!! - TERCEIRA FASE DO CICLO DE INSTRUÇÕES
 				// if int ligada - vai para tratamento da int
 				// desviar para rotina java que trata int
@@ -500,6 +508,9 @@ public class Sistema {
 				System.out.println("PROGRAMA NAO ENCONTRADO");
 
 			} else {
+				gp.CurrentProcessGP = CurrentProcess;
+				gp.CurrentProcessGP.setState(STATE.RUNNING);
+
 				vm.cpu.setContext(CurrentProcess.getPc(), CurrentProcess.getTPaginaProcesso(), STATE.RUNNING); // monitor seta contexto
 																								// - pc aponta para
 																								// inicio do programa
@@ -520,12 +531,23 @@ public class Sistema {
 		 * ListProcess = lista com todos os processos criados que estão em memoria
 		 */
 		ArrayList<PCB> ListProcess = new ArrayList<PCB>();
+		PCB CurrentProcessGP;
+
 		int uniqueId = 0;
 
 		public int getUniqueId(){
 			int idReturn = this.uniqueId;
 			this.uniqueId++;
 			return idReturn;
+		}
+
+		public void Escalonador(){
+
+
+			ArrayList<PCB> ReadyProcess = (ArrayList<Sistema.GP.PCB>) ListProcess.stream()
+				.filter(e -> e.getState() == STATE.READY); //Filtra processos em estados pronto
+			
+				ReadyProcess.stream().forEach(e -> System.out.println(e.id));
 		}
 		
 
@@ -775,7 +797,8 @@ public class Sistema {
 	 */
 	public enum STATE{
 		RUNNING, 
-		READY;
+		READY,
+		BLOCKED;
 	}
 	
 
@@ -794,11 +817,13 @@ public class Sistema {
 
 	}
 
-	public class Terminal {
-		public Terminal() {
+	public class Terminal extends Thread{
+		Sistema s;
+		public Terminal(Sistema s) {
+			this.s = s;
 		}
 
-		public Terminal(Sistema s) {
+		public void run() {
 			boolean SystemRun = true;
 			Scanner scanner = new Scanner(System.in);
 			while (SystemRun) {
@@ -933,8 +958,15 @@ public class Sistema {
 			System.out.println("Opcode invalido");
 		if (i == interrupt.Overflow)
 			System.out.println("OverFlow");
-		if (i == interrupt.Stop)
+
+		if (i == interrupt.Stop){
+			monitor.gp.desalocaProcesso(monitor.gp.CurrentProcessGP.getId());
 			System.out.println("Fim da execucao do programa");
+		}
+
+		if (i == interrupt.Timer){
+
+		}
 	}
 
 	// ------------------- S I S T E M A - fim
@@ -946,7 +978,8 @@ public class Sistema {
 	public static void main(String args[]) {
 		Sistema s = new Sistema();
 		s.showConfiguration();
-		s.new Terminal(s);
+		Terminal terminal = s.new Terminal(s);
+		terminal.start();
 	}
 
 	// -------------------------------------------------------------------------------------------------------
