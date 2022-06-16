@@ -64,7 +64,7 @@ public class Sistema {
 		private Word[] m; // CPU acessa MEMORIA, guarda referencia 'm' a ela. memoria nao muda. ee sempre
 							// a mesma.
 		GM.tabelaPaginaProcesso pagesProcess;
-		STATE state;
+		STATE state; //É usado pelo escalonador
 
 
 		//=//=//=//=//=//=//=//=//=//=//=//=//=//=//=//=//=
@@ -495,7 +495,7 @@ public class Sistema {
 			}
 		}
 
-		public void executa(int id) {
+		public void executa(int id) {  // -------------------------------------------------------------------------------Escalonador -------------------------------
 			vm.cpu.resetInterrupt(); // zera os interruptores
 
 			GP.PCB CurrentProcess = null;
