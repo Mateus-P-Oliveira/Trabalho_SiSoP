@@ -26,7 +26,7 @@ public class Sistema {
 		public int r2; // indice do segundo registrador da operacao (Rc ou Rs cfe operacao)
 		public int p; // parametro para instrucao (k ou A cfe operacao), ou o dado, se opcode = DADO
 
-		public Word(Opcode _opc, int _r1, int _r2, int _p) {
+		public Word(Opcode _opc, int _r1, int _r2, int _p) { // Usados pelas instruções não precisa mexer 
 			opc = _opc;
 			r1 = _r1;
 			r2 = _r2;
@@ -47,7 +47,7 @@ public class Sistema {
 		TRAP;
 	}
 
-	public enum interrupt { // interrupcoes da CPU
+	public enum interrupt { // interrupcoes da CPU //Enum serve como const do C++
 		None, Overflow, InvalidOpcode, InvalidAdrress, Stop, Timer;
 	}
 
@@ -57,7 +57,7 @@ public class Sistema {
 		private Word ir; // instruction register,
 		private int[] reg; // registradores da CPU
 
-		interrupt interrupcaoAtiva; // interrupcao a ser guardada pelo processador;
+		interrupt interrupcaoAtiva; // interrupcao a ser guardada pelo processador; //Ele recebe as constantes feitas pelo Enum
 		int DeltaTimer; //Varial para simultar o Timer para interrupção TIMER no processado
 		
 
@@ -94,7 +94,7 @@ public class Sistema {
 			System.out.println("  ] ");
 		}
 
-		private void showState() {
+		private void showState() {//Faz parte do escalonador
 			System.out.println("       " + pc);
 			System.out.print("           ");
 			for (int i = 0; i < reg.length; i++) {
@@ -108,8 +108,8 @@ public class Sistema {
 		}
 
 		private void resetInterrupt() {
-			interrupcaoAtiva = interrupt.None;
-			DeltaTimer = 5;
+			interrupcaoAtiva = interrupt.None; //Desabilita a interrupção que estiver ativa no momento 
+			DeltaTimer = 5; //Coloca 5 ciclos no timer 
 		}
 
 		public void run() { // execucao da CPU supoe que o contexto da CPU, vide acima, esta devidamente
@@ -195,12 +195,12 @@ public class Sistema {
 							pc++;
 							break;
 
-						case SUBI: // Here
+						case SUBI: 
 							reg[ir.r1] = reg[ir.r1] - ir.p;
 							pc++;
 							break;
 
-						case JMPI: // Here
+						case JMPI:
 							pc = ir.r1;
 							break;
 
@@ -208,7 +208,7 @@ public class Sistema {
 							pc = ir.p;
 							break;
 
-						case JMPIL: // HEre
+						case JMPIL: 
 							if (reg[ir.r2] < 0) {
 								pc = reg[ir.r1];
 							} else {
@@ -234,11 +234,11 @@ public class Sistema {
 							}
 							break;
 
-						case JMPIM:// Here
+						case JMPIM:
 							addressT = vm.gm.translate(ir.p, pagesProcess);
 							pc = m[addressT].p;
 
-						case JMPIGM: // if Rc > 0 then PC <- [A] Else PC <- PC +1 // Here
+						case JMPIGM: // if Rc > 0 then PC <- [A] Else PC <- PC +1 
 							if (reg[ir.r2] > 0) {
 								addressT = vm.gm.translate(ir.p, pagesProcess);
 								pc = m[addressT].p;
@@ -300,18 +300,18 @@ public class Sistema {
 							break;
 
 						case STOP: // por enquanto, para execucao
-							interrupcaoAtiva = interrupt.Stop;
+							interrupcaoAtiva = interrupt.Stop; // Chama instrução Ativa do tipo Stop
 							break;
 						default:
 							// opcode desconhecido
 							// liga interrup (2)
-							interrupcaoAtiva = interrupt.InvalidOpcode;
+							interrupcaoAtiva = interrupt.InvalidOpcode; //Chama para instrução ativa do tipo InvalidOpcode
 					}
 				} catch (IndexOutOfBoundsException e) { // execoes para acesso a elemento de memoria maior que o
 														// vetor
 					interrupcaoAtiva = interrupt.InvalidAdrress;
 				}
-				//Decremento do timer
+				//Decremento do timer //Controle do Escalonamento
 				DeltaTimer--;
 				if(DeltaTimer==0)
 					interrupcaoAtiva = interrupcaoAtiva.Timer;
@@ -376,7 +376,7 @@ public class Sistema {
 	// ------------------------------------------------------------------------
 	// -------------------------------------------------------------------------------------------------------
 
-	public void showConfiguration(){
+	public void showConfiguration(){ // Menu 
 		System.out.println("\n\n-----------------------------------------------------------");
 		System.out.println("*Verificar explicacoes no readme");
 		System.out.println("https://github.com/gilbertokoerbes/Trabalho_SiSoP/blob/main/README.md");
@@ -509,7 +509,7 @@ public class Sistema {
 
 			} else {
 				gp.CurrentProcessGP = CurrentProcess;
-				gp.CurrentProcessGP.setState(STATE.RUNNING);
+				gp.CurrentProcessGP.setState(STATE.RUNNING); // Muda o estado para execução, assim o escalonador ira saber o que fazer
 
 				vm.cpu.setContext(CurrentProcess.getPc(), CurrentProcess.getTPaginaProcesso(), STATE.RUNNING); // monitor seta contexto
 																								// - pc aponta para
@@ -570,7 +570,7 @@ public class Sistema {
 			if (sucessAlocation) {
 				int id = getUniqueId(); // id igual o ultimo tamanho do array de processos
 				monitor.carga(programa, vm.m, newPages);
-				PCB P = new PCB(id, 0, newPages);
+				PCB P = new PCB(id, 0, newPages); 
 				ListProcess.add(P);
 				return id;
 			}
@@ -750,7 +750,7 @@ public class Sistema {
 			int offset = posicaoSolicitada % tamFrame; // offset desclocamente dentro do frame
 
 			
-			if (p >= totalFrames && this.dynamicOverridePages) { // verifica se durante a exexcução foi requisitado
+			if (p >= totalFrames && this.dynamicOverridePages) { // verifica se durante a execução foi requisitado
 																	// algum endereco fora do escopo de paginas
 				boolean sucessNewAllocaded = alocaPaginas(1, t); // aloca nova pagina para posição
 				if (sucessNewAllocaded) {
@@ -817,7 +817,7 @@ public class Sistema {
 
 	}
 
-	public class Terminal extends Thread{
+	public class Terminal extends Thread{ //-------------------------------Terminal---------------------------------------------------------------
 		Sistema s;
 		public Terminal(Sistema s) {
 			this.s = s;
@@ -933,7 +933,7 @@ public class Sistema {
 
 		}
 
-	}
+	}//---------------------------------------------------------------------------------------------------------------------------------------------------------
 
 	
 	/*
