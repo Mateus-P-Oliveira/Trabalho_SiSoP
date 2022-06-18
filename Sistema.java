@@ -9,7 +9,6 @@ import java.lang.reflect.Array;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 
-
 public class Sistema {
 
 	// -------------------------------------------------------------------------------------------------------
@@ -58,25 +57,24 @@ public class Sistema {
 		private int[] reg; // registradores da CPU
 
 		interrupt interrupcaoAtiva; // interrupcao a ser guardada pelo processador;
-		int DeltaTimer; //Varial para simultar o Timer para interrupção TIMER no processado
-		
+		int DeltaTimer; // Varial para simultar o Timer para interrupção TIMER no processado
 
 		private Word[] m; // CPU acessa MEMORIA, guarda referencia 'm' a ela. memoria nao muda. ee sempre
 							// a mesma.
 		GM.tabelaPaginaProcesso pagesProcess;
 		STATE state;
 
-
-		//=//=//=//=//=//=//=//=//=//=//=//=//=//=//=//=//=
+		// =//=//=//=//=//=//=//=//=//=//=//=//=//=//=//=//=
 
 		public CPU(Word[] _m) { // ref a MEMORIA e interrupt handler passada na criacao da CPU
 			m = _m; // usa o atributo 'm' para acessar a memoria.
 			reg = new int[10]; // aloca o espaço dos registradores
 		}
 
-		public void setContext(int _pc, GM.tabelaPaginaProcesso pagesProcess, STATE state) { // no futuro esta funcao vai ter que ser
-																				// /// incremenado tabelaPagina do
-																				// processo para o contexto
+		public void setContext(int _pc, GM.tabelaPaginaProcesso pagesProcess, STATE state) { // no futuro esta funcao
+																								// vai ter que ser
+			// /// incremenado tabelaPagina do
+			// processo para o contexto
 			pc = _pc; // limite e pc (deve ser zero nesta versao)
 			this.pagesProcess = pagesProcess;
 			this.state = state;
@@ -149,7 +147,7 @@ public class Sistema {
 
 						case LDX: // Rd <- [Rs] // Here
 							// m[reg[ir.r2]].opc = Opcode.DATA; //Leitura não precisa saber o que é feito
-							reg[ir.r1] = m[reg[ir.r2]].p; //Corrigido para pegar os dados internos
+							reg[ir.r1] = m[reg[ir.r2]].p; // Corrigido para pegar os dados internos
 							pc++;
 							break;
 
@@ -311,9 +309,9 @@ public class Sistema {
 														// vetor
 					interrupcaoAtiva = interrupt.InvalidAdrress;
 				}
-				//Decremento do timer
+				// Decremento do timer
 				DeltaTimer--;
-				if(DeltaTimer==0)
+				if (DeltaTimer == 0)
 					interrupcaoAtiva = interrupcaoAtiva.Timer;
 				// VERIFICA INTERRUPÇÃO !!! - TERCEIRA FASE DO CICLO DE INSTRUÇÕES
 				// if int ligada - vai para tratamento da int
@@ -369,14 +367,13 @@ public class Sistema {
 			cpu = new CPU(m); // cpu acessa memória
 		}
 
-
 	}
 
 	// ------------------- V M - fim
 	// ------------------------------------------------------------------------
 	// -------------------------------------------------------------------------------------------------------
 
-	public void showConfiguration(){
+	public void showConfiguration() {
 		System.out.println("\n\n-----------------------------------------------------------");
 		System.out.println("*Verificar explicacoes no readme");
 		System.out.println("https://github.com/gilbertokoerbes/Trabalho_SiSoP/blob/main/README.md");
@@ -390,10 +387,7 @@ public class Sistema {
 		System.out.print(" | Tamanho dos frames: " + vm.tamFrame);
 		System.out.println(" | Total de frames: " + vm.nroFrames);
 		System.out.println("--------------------------------------------------------------------\n\n");
-		
 
-
-			
 	}
 
 	// --------------------H A R D W A R E - fim
@@ -467,20 +461,18 @@ public class Sistema {
 
 		}
 
-		public void ps(){
+		public void ps() {
 			for (GP.PCB p : monitor.gp.ListProcess) {
-					System.out.println("----------------------------------------");
-					System.out.print("PCB Info");
-					System.out.print("		| Process id: " + p.id);
-					System.out.print("		| Atual pc: " + p.pcContext);
-					System.out.print("		| Lista de frames ocupados pelo processo: " + p.tPaginaProcesso.toString());
-					System.out.println("	| State: "+p.getStateString());
+				System.out.println("----------------------------------------");
+				System.out.print("PCB Info");
+				System.out.print("		| Process id: " + p.id);
+				System.out.print("		| Atual pc: " + p.pcContext);
+				System.out.print("		| Lista de frames ocupados pelo processo: " + p.tPaginaProcesso.toString());
+				System.out.println("	| State: " + p.getStateString());
 
 			}
 
 		}
-
-		
 
 		public void carga(Word[] p, Word[] m, GM.tabelaPaginaProcesso paginasDoProcesso) { // significa ler "p" de
 																							// memoria secundaria e
@@ -511,9 +503,11 @@ public class Sistema {
 				gp.CurrentProcessGP = CurrentProcess;
 				gp.CurrentProcessGP.setState(STATE.RUNNING);
 
-				vm.cpu.setContext(CurrentProcess.getPc(), CurrentProcess.getTPaginaProcesso(), STATE.RUNNING); // monitor seta contexto
-																								// - pc aponta para
-																								// inicio do programa
+				vm.cpu.setContext(CurrentProcess.getPc(), CurrentProcess.getTPaginaProcesso(), STATE.RUNNING); // monitor
+																												// seta
+																												// contexto
+				// - pc aponta para
+				// inicio do programa
 				vm.cpu.run(); // e cpu executa
 								// note aqui que o monitor espera que o programa carregado acabe normalmente
 								// nao ha protecoes... o que poderia acontecer ?
@@ -521,6 +515,7 @@ public class Sistema {
 		}
 
 	}
+
 	// -------------------------------------------
 	/**
 	 * Gerenciador de processos
@@ -535,28 +530,38 @@ public class Sistema {
 
 		int uniqueId = 0;
 
-		public int getUniqueId(){
+		public int getUniqueId() {
 			int idReturn = this.uniqueId;
 			this.uniqueId++;
 			return idReturn;
 		}
-
-		public void Escalonador(){
-
+		/**
+		 * Escalonador implementa FIFS(First-In First-Served)
+		 * Nao necessita parametros, pois ira acessar a variavel do processo corrente em execucao
+		 */
+		public void Escalonador() {
+			if(CurrentProcessGP == null)
+			CurrentProcessGP.setState(STATE.READY);//(re)coloca o estado atual como pronto
 
 			ArrayList<PCB> ReadyProcess = (ArrayList<Sistema.GP.PCB>) ListProcess.stream()
-				.filter(e -> e.getState() == STATE.READY); //Filtra processos em estados pronto
+					.filter(e -> e.getState() == STATE.READY); // Filtra processos em estados pronto
+
+			System.out.println("processos prontos");
+			ReadyProcess.stream().forEach(e -> System.out.println(e.getId()));
 			
-				ReadyProcess.stream().forEach(e -> System.out.println(e.id));
+			PCB Escalonado = ReadyProcess.get(0);//obtem o primeiro da fila
+			monitor.executa(Escalonado.getId());//executa o primeiro processo filtrado do estado pronto
 		}
-		
+		private void extracted(Sistema.GP.PCB e) {
+			System.out.println(e.getId());
+		}
 
 		/**
 		 * 
 		 * Metodo para criação de processo
 		 * 
 		 * @param programa
-
+		 * 
 		 * @return true: alocação com sucesso
 		 * @return false: alocação falhou
 		 */
@@ -584,7 +589,7 @@ public class Sistema {
 				PCB Process = ListProcess.get(i);
 				if (Process.id == id) {
 					// remover de todas as listas
-					for(Integer framePos : Process.tPaginaProcesso.tabela){ //desaloca os frames ocupados
+					for (Integer framePos : Process.tPaginaProcesso.tabela) { // desaloca os frames ocupados
 						vm.gm.frameLivre[framePos] = true;
 					}
 					ListProcess.remove(Process);
@@ -621,22 +626,23 @@ public class Sistema {
 				this.pcContext = newPc;
 			}
 
-			public void setState(STATE state){
+			public void setState(STATE state) {
 				this.state = state;
 			}
-			public STATE getState(){
+
+			public STATE getState() {
 				return this.state;
 			}
-			
-			public String getStateString(){
+
+			public String getStateString() {
 				switch (this.state) {
 					case READY:
 						return "Ready";
 					case RUNNING:
 						return "Running";
 					default:
-						return "STATE FAILED!";					
-					
+						return "STATE FAILED!";
+
 				}
 			}
 
@@ -678,14 +684,14 @@ public class Sistema {
 			frameLivre = new boolean[nroFrames]; // seta o tamanho do array de frame
 
 			if (busyFrameTest) {
-			System.out.println("*BUSY FRAME TEST ACTIVE!"); //avisa sobre o teste ativo
-			System.out.println("Frames alocados como ocupados: ");
+				System.out.println("*BUSY FRAME TEST ACTIVE!"); // avisa sobre o teste ativo
+				System.out.println("Frames alocados como ocupados: ");
 			}
 			for (int i = 0; i < nroFrames; i++) {// inicia todos os frames em true
 				frameLivre[i] = true;
 
 				if (i % 2 == 0 && busyFrameTest) {
-					System.out.print(" | " + i );
+					System.out.print(" | " + i);
 					frameLivre[i] = false; // test case
 				}
 			}
@@ -696,8 +702,9 @@ public class Sistema {
 			int nroframeslivre = 0; // verifica o total de frames livres
 			int paginasRequeridas = nroPalavras / this.tamFrame;
 
-			int offset = nroPalavras % this.tamFrame; //caso haja divisao quebrada, necessita mais uma pagina
-			if(offset!=0) paginasRequeridas++;
+			int offset = nroPalavras % this.tamFrame; // caso haja divisao quebrada, necessita mais uma pagina
+			if (offset != 0)
+				paginasRequeridas++;
 
 			for (boolean b : frameLivre) { // calculando frames livres
 				if (b == true)
@@ -749,7 +756,6 @@ public class Sistema {
 			int p = posicaoSolicitada / tamFrame; // p = contagem de posicao no array da tabela
 			int offset = posicaoSolicitada % tamFrame; // offset desclocamente dentro do frame
 
-			
 			if (p >= totalFrames && this.dynamicOverridePages) { // verifica se durante a exexcução foi requisitado
 																	// algum endereco fora do escopo de paginas
 				boolean sucessNewAllocaded = alocaPaginas(1, t); // aloca nova pagina para posição
@@ -791,16 +797,17 @@ public class Sistema {
 		}
 
 	}
+
 	/**
 	 * States do processo, utilizado por GP
+	 * 
 	 * @see Sistema.GP
 	 */
-	public enum STATE{
-		RUNNING, 
+	public enum STATE {
+		RUNNING,
 		READY,
 		BLOCKED;
 	}
-	
 
 	// -------------------------------------------------------------------------------------------------------
 	// ------------------- S I S T E M A
@@ -817,8 +824,9 @@ public class Sistema {
 
 	}
 
-	public class Terminal extends Thread{
+	public class Terminal extends Thread {
 		Sistema s;
+
 		public Terminal(Sistema s) {
 			this.s = s;
 		}
@@ -829,105 +837,108 @@ public class Sistema {
 			while (SystemRun) {
 
 				System.out.print("~$terminal: ");
-				String inputConsole = scanner.nextLine();				
+				String inputConsole = scanner.nextLine();
 				String inputParams[] = inputConsole.split(" ");
-				int id = -1; //id de processo quando solicitado
-				try{
-				switch (inputParams[0]) {
-					
-					case "cria":
-						System.out.println("Processo solicitado = " + inputParams[1]);
-						int idNewProcess = -1;
-						switch(inputParams[1]){				
-							
-							case "PA":
-								idNewProcess = s.monitor.gp.criaProcesso(progs.PA);
-								System.out.println("id = " + idNewProcess);
-								break;
-							case "PB":
-								idNewProcess = s.monitor.gp.criaProcesso(progs.PB);
-								System.out.println(idNewProcess);
-								break;
-								
-							case "PC":
-								idNewProcess = s.monitor.gp.criaProcesso(progs.PC);
-								System.out.println(idNewProcess);
-								break;
-							case "testIN":
-								idNewProcess = s.monitor.gp.criaProcesso(progs.testIN);
-								System.out.println(idNewProcess);
-								break;
-							case "testOUT":
-								idNewProcess = s.monitor.gp.criaProcesso(progs.testOUT);
-								System.out.println(idNewProcess);
-								break;
-							case "testInvalidAdrress":
-								idNewProcess = s.monitor.gp.criaProcesso(progs.testInvalidAdrress);
-								System.out.println(idNewProcess);
-								break;
-							case "testOverFlow":
-								idNewProcess = s.monitor.gp.criaProcesso(progs.testOverFlow);
-								System.out.println(idNewProcess);
-								break;
-							
-							default:
-								System.out.println("Programa invalido ou inexistente.");
-								break;
-						}
-						break;	//break criaProcesso							
+				int id = -1; // id de processo quando solicitado
+				try {
+					switch (inputParams[0]) {
 
-					case "executa":
-						id = Integer.parseInt(inputParams[1]);
-						s.monitor.executa(id);
-						break;
-					
-					case "dump":
-						id = Integer.parseInt(inputParams[1]);
-						s.monitor.dumpId(id);
-						break;
-					case "dumpM":
-						int ini = Integer.parseInt(inputParams[1]); 
-						int fim = Integer.parseInt(inputParams[2]) + 1; //correcao para comtemplar a ultima posicao solicitada 
-						s.monitor.dump(vm.m, ini, fim);
-						break;
+						case "cria":
+							System.out.println("Processo solicitado = " + inputParams[1]);
+							int idNewProcess = -1;
+							switch (inputParams[1]) {
 
-					case "desaloca":
-						id = Integer.parseInt(inputParams[1]);
-						s.monitor.gp.desalocaProcesso(id);;
-						break;
-					case "dumpAllFrames":						
-						s.monitor.dumpAllFrames();//exibit todos os frames
-						break;
-					case "dumpFrame":
-						int frame = Integer.parseInt(inputParams[1]);
-						vm.gm.dumpFrame(frame);
-						break;
-					case "ps":
-						s.monitor.ps();	
-						break;
-					case "exit":
-						System.out.println("Bye!");
-						SystemRun = false;
-						break;
-					case "":
-						break;
-					default:
-						System.out.println("Parametro invalido. Verifique em READM");
-						break;
+								case "PA":
+									idNewProcess = s.monitor.gp.criaProcesso(progs.PA);
+									System.out.println("id = " + idNewProcess);
+									break;
+								case "PB":
+									idNewProcess = s.monitor.gp.criaProcesso(progs.PB);
+									System.out.println(idNewProcess);
+									break;
 
-					
+								case "PC":
+									idNewProcess = s.monitor.gp.criaProcesso(progs.PC);
+									System.out.println(idNewProcess);
+									break;
+								case "testIN":
+									idNewProcess = s.monitor.gp.criaProcesso(progs.testIN);
+									System.out.println(idNewProcess);
+									break;
+								case "testOUT":
+									idNewProcess = s.monitor.gp.criaProcesso(progs.testOUT);
+									System.out.println(idNewProcess);
+									break;
+								case "testInvalidAdrress":
+									idNewProcess = s.monitor.gp.criaProcesso(progs.testInvalidAdrress);
+									System.out.println(idNewProcess);
+									break;
+								case "testOverFlow":
+									idNewProcess = s.monitor.gp.criaProcesso(progs.testOverFlow);
+									System.out.println(idNewProcess);
+									break;
+
+								default:
+									System.out.println("Programa invalido ou inexistente.");
+									break;
+							}
+							break; // break criaProcesso
+
+						case "executa":
+							//id = Integer.parseInt(inputParams[1]);
+							//s.monitor.executa(id);
+							System.out.println("A EXECUTAR");
+							monitor.gp.Escalonador();
+							break;
+
+						case "dump":
+							id = Integer.parseInt(inputParams[1]);
+							s.monitor.dumpId(id);
+							break;
+						case "dumpM":
+							int ini = Integer.parseInt(inputParams[1]);
+							int fim = Integer.parseInt(inputParams[2]) + 1; // correcao para comtemplar a ultima posicao
+																			// solicitada
+							s.monitor.dump(vm.m, ini, fim);
+							break;
+
+						case "desaloca":
+							id = Integer.parseInt(inputParams[1]);
+							s.monitor.gp.desalocaProcesso(id);
+							;
+							break;
+						case "dumpAllFrames":
+							s.monitor.dumpAllFrames();// exibit todos os frames
+							break;
+						case "dumpFrame":
+							int frame = Integer.parseInt(inputParams[1]);
+							vm.gm.dumpFrame(frame);
+							break;
+						case "ps":
+							s.monitor.ps();
+							break;
+						case "exit":
+							System.out.println("Bye!");
+							SystemRun = false;
+							break;
+						case "":
+							break;
+						default:
+							System.out.println("Parametro invalido. Verifique em READM");
+							break;
+
+					}
+				} catch (Exception e) {// excecoes de entrada. Forma interativa
+
+					System.out.println(inputParams[0]);
+
+					String tab = ""; // deslocar as escritas de argumentos
+					while (tab.length() <= inputParams[0].length())
+						tab += " ";
+
+					System.out.println(tab + "^^^");
+					System.out.println(tab + "argumentos invalidos para solicitacao. Verifique em README");
 				}
-			}catch(Exception e){//excecoes de entrada. Forma interativa
-				
-				System.out.println(inputParams[0]);
-				
-				String tab =""; //deslocar as escritas de argumentos
-				while(tab.length()<=inputParams[0].length())
-					tab+=" ";
-				
-				System.out.println(tab + "^^^");
-				System.out.println(tab + "argumentos invalidos para solicitacao. Verifique em README");
-			}
 
 			}
 
@@ -935,20 +946,22 @@ public class Sistema {
 
 	}
 
-	
 	/*
-	/**
+	 * /**
+	 * 
 	 * @deprecated
-	 * @param id	 
-	public void roda(int id) { // metodo roda modificado
-		// Instanciar um objeto para conter a tabela de paginas desse processo. Essa
-		// tabela irá ser manipulada pelo GM
-
-		monitor.dump(vm.m, 0, 90); // Muda o total do Dump
-		monitor.executa(id);
-		System.out.println("---------------------------------- após execucao ");
-		monitor.dump(vm.m, 0, 90); // Muda o total do Dump
-	}*/
+	 * 
+	 * @param id
+	 * public void roda(int id) { // metodo roda modificado
+	 * // Instanciar um objeto para conter a tabela de paginas desse processo. Essa
+	 * // tabela irá ser manipulada pelo GM
+	 * 
+	 * monitor.dump(vm.m, 0, 90); // Muda o total do Dump
+	 * monitor.executa(id);
+	 * System.out.println("---------------------------------- após execucao ");
+	 * monitor.dump(vm.m, 0, 90); // Muda o total do Dump
+	 * }
+	 */
 
 	public void trataTnterrupcoes(interrupt i) {
 		System.out.print("I-N-T-E-R-R-U-P-T-I-O-N -> ");
@@ -959,12 +972,14 @@ public class Sistema {
 		if (i == interrupt.Overflow)
 			System.out.println("OverFlow");
 
-		if (i == interrupt.Stop){
+		if (i == interrupt.Stop) {
 			monitor.gp.desalocaProcesso(monitor.gp.CurrentProcessGP.getId());
 			System.out.println("Fim da execucao do programa");
 		}
 
-		if (i == interrupt.Timer){
+		if (i == interrupt.Timer) {
+			System.out.println("Escalonamento");
+			monitor.gp.Escalonador(); // chama o escalonador
 
 		}
 	}
@@ -1107,108 +1122,108 @@ public class Sistema {
 				new Word(Opcode.STOP, -1, -1, -1),
 		};
 
-		public Word[] PA = new Word[]{
-			new Word(Opcode.LDI, 0, -1, 4), //Input da repeticao
-			new Word(Opcode.LDI, 1, -1, 28),
-			new Word(Opcode.LDI, 2, -1, 0),
-			new Word(Opcode.LDI, 3, -1, 27),
-			new Word(Opcode.LDI, 4, -1, 1),
-			new Word(Opcode.LDI, 5, -1, 32),
-			//JMP Teste do zero
-			new Word(Opcode.JMPIL, 1, 0, -1),
-			new Word(Opcode.LDI, 6, -1, 0),
-			new Word(Opcode.STX, 5, 6, -1),
-			new Word(Opcode.ADDI, 5, -1, 1),
-			new Word(Opcode.SUBI, 0, -1, 1),
-			new Word(Opcode.JMPIE, 3, 0, -1),
-			new Word(Opcode.STX, 5, 4, -1),
-			new Word(Opcode.ADDI, 5, -1, 1),
-			new Word(Opcode.SUBI, 0, -1, 1),
-			//LOOP Fibonacci
-			new Word(Opcode.JMPIE, 3, 0, -1),
-			new Word(Opcode.SUBI, 0, -1, 1),
-			new Word(Opcode.ADD, 6, 4, -1),
-			new Word(Opcode.STX, 5, 6, -1),
-			new Word(Opcode.ADDI, 5, -1, 1),
-			new Word(Opcode.LDI, 2, -1, 0),
-			new Word(Opcode.ADD, 2, 6, -1),
-			new Word(Opcode.LDI, 6, -1, 0),
-			new Word(Opcode.ADD, 6, 4, -1),
-			new Word(Opcode.LDI, 4, -1, 0),
-			new Word(Opcode.ADD, 4, 2, -1),
-			new Word(Opcode.JMP, -1, -1, 15),
-			//Fim do programa 
-			new Word(Opcode.STOP, -1, -1, -1),
-			//Fim do programa se for um zero
-			new Word(Opcode.LDI, 2, -1, -1),
-			new Word(Opcode.STD, 2, -1, 32),
-			new Word(Opcode.STOP, -1, -1, -1)
+		public Word[] PA = new Word[] {
+				new Word(Opcode.LDI, 0, -1, 4), // Input da repeticao
+				new Word(Opcode.LDI, 1, -1, 28),
+				new Word(Opcode.LDI, 2, -1, 0),
+				new Word(Opcode.LDI, 3, -1, 27),
+				new Word(Opcode.LDI, 4, -1, 1),
+				new Word(Opcode.LDI, 5, -1, 32),
+				// JMP Teste do zero
+				new Word(Opcode.JMPIL, 1, 0, -1),
+				new Word(Opcode.LDI, 6, -1, 0),
+				new Word(Opcode.STX, 5, 6, -1),
+				new Word(Opcode.ADDI, 5, -1, 1),
+				new Word(Opcode.SUBI, 0, -1, 1),
+				new Word(Opcode.JMPIE, 3, 0, -1),
+				new Word(Opcode.STX, 5, 4, -1),
+				new Word(Opcode.ADDI, 5, -1, 1),
+				new Word(Opcode.SUBI, 0, -1, 1),
+				// LOOP Fibonacci
+				new Word(Opcode.JMPIE, 3, 0, -1),
+				new Word(Opcode.SUBI, 0, -1, 1),
+				new Word(Opcode.ADD, 6, 4, -1),
+				new Word(Opcode.STX, 5, 6, -1),
+				new Word(Opcode.ADDI, 5, -1, 1),
+				new Word(Opcode.LDI, 2, -1, 0),
+				new Word(Opcode.ADD, 2, 6, -1),
+				new Word(Opcode.LDI, 6, -1, 0),
+				new Word(Opcode.ADD, 6, 4, -1),
+				new Word(Opcode.LDI, 4, -1, 0),
+				new Word(Opcode.ADD, 4, 2, -1),
+				new Word(Opcode.JMP, -1, -1, 15),
+				// Fim do programa
+				new Word(Opcode.STOP, -1, -1, -1),
+				// Fim do programa se for um zero
+				new Word(Opcode.LDI, 2, -1, -1),
+				new Word(Opcode.STD, 2, -1, 32),
+				new Word(Opcode.STOP, -1, -1, -1)
 		};
 
-		public Word[] PC =new Word[]{
-			//coloca elementos no vetor
-			new Word(Opcode.LDI, 0, -1, 8),
-			new Word(Opcode.STD, 0, -1, 60),
-			new Word(Opcode.LDI, 0, -1, 7),
-			new Word(Opcode.STD, 0, -1, 61),
-			new Word(Opcode.LDI, 0, -1, 6),
-			new Word(Opcode.STD, 0, -1, 62),
-			new Word(Opcode.LDI, 0, -1, 5),
-			new Word(Opcode.STD, 0, -1, 63),
-			new Word(Opcode.LDI, 0, -1, 4),
-			new Word(Opcode.STD, 0, -1, 64),
-			new Word(Opcode.LDI, 0, -1, 3),
-			new Word(Opcode.STD, 0, -1, 65),
-			new Word(Opcode.LDI, 0, -1, 2),
-			new Word(Opcode.STD, 0, -1, 66),
-			new Word(Opcode.LDI, 0, -1, 1),
-			new Word(Opcode.STD, 0, -1, 67),
-			//Pega o tamanho do vetor
-			new Word(Opcode.LDI, 8, -1, 8),//Tamanho do vetor
-			new Word(Opcode.LDI, 9, -1, 2),
-			new Word(Opcode.MULT, 8, 9, -1),
-			new Word(Opcode.ADDI, 8, -1, 1),//Repeticoes
-			new Word(Opcode.LDI, 9, -1, 52),
-			//Loop Externo
-			new Word(Opcode.SUBI, 8, -1, 1),
-			new Word(Opcode.JMPIE, 9, 8, -1),
-			//Associa os Reg
-			new Word(Opcode.LDI, 0, -1, 60),
-			new Word(Opcode.LDI, 7, -1, 61),
-			new Word(Opcode.LDI, 1, -1, 51),
-			new Word(Opcode.LDX, 2, 0, -1),
-			new Word(Opcode.LDX, 3, 7, -1),
-			new Word(Opcode.LDI, 4, -1, 0),
-			new Word(Opcode.LDI, 5, -1, 46),
-			new Word(Opcode.LDI, 6, -1, 8), //Tamanho do vetor
-			//Aumento o vetor
-			new Word(Opcode.ADDI, 6, -1, 0),
-			new Word(Opcode.JMP, -1, -1, 35),
-			//Loop principal
-			new Word(Opcode.ADDI, 0, -1, 1),
-			new Word(Opcode.ADDI, 7, -1, 1),
-			new Word(Opcode.LDX, 2, 0, -1),
-			new Word(Opcode.LDX, 3, 7, -1),
-			new Word(Opcode.SUBI, 6, -1, 1),
-			new Word(Opcode.LDI, 4, -1, 0),
-			new Word(Opcode.ADD, 4, 2, -1),
-			new Word(Opcode.JMPIE, 1, 6, -1),
-			new Word(Opcode.SUB, 2, 3, -1),
-			new Word(Opcode.JMPIG, 5, 2, -1),
-			new Word(Opcode.LDI, 2, -1, 0),
-			new Word(Opcode.ADD, 2, 4, -1),
-			new Word(Opcode.JMP, -1, -1, 33),
-			//Bubble Sort
-			new Word(Opcode.STX, 0, 3, -1),
-			new Word(Opcode.STX, 7, 4, -1),
-			new Word(Opcode.LDI, 2, -1, 0),
-			//new Word(Opcode.LDI, 4, -1, 0),
-			new Word(Opcode.ADD, 2, 4, -1),
-			new Word(Opcode.JMP, -1, -1, 33),
-			//JMP para o loop externo
-			new Word(Opcode.JMP, -1, -1, 21),
-			//FIM DO PROGRAMA
-			new Word(Opcode.STOP, -1, -1, -1)
+		public Word[] PC = new Word[] {
+				// coloca elementos no vetor
+				new Word(Opcode.LDI, 0, -1, 8),
+				new Word(Opcode.STD, 0, -1, 60),
+				new Word(Opcode.LDI, 0, -1, 7),
+				new Word(Opcode.STD, 0, -1, 61),
+				new Word(Opcode.LDI, 0, -1, 6),
+				new Word(Opcode.STD, 0, -1, 62),
+				new Word(Opcode.LDI, 0, -1, 5),
+				new Word(Opcode.STD, 0, -1, 63),
+				new Word(Opcode.LDI, 0, -1, 4),
+				new Word(Opcode.STD, 0, -1, 64),
+				new Word(Opcode.LDI, 0, -1, 3),
+				new Word(Opcode.STD, 0, -1, 65),
+				new Word(Opcode.LDI, 0, -1, 2),
+				new Word(Opcode.STD, 0, -1, 66),
+				new Word(Opcode.LDI, 0, -1, 1),
+				new Word(Opcode.STD, 0, -1, 67),
+				// Pega o tamanho do vetor
+				new Word(Opcode.LDI, 8, -1, 8), // Tamanho do vetor
+				new Word(Opcode.LDI, 9, -1, 2),
+				new Word(Opcode.MULT, 8, 9, -1),
+				new Word(Opcode.ADDI, 8, -1, 1), // Repeticoes
+				new Word(Opcode.LDI, 9, -1, 52),
+				// Loop Externo
+				new Word(Opcode.SUBI, 8, -1, 1),
+				new Word(Opcode.JMPIE, 9, 8, -1),
+				// Associa os Reg
+				new Word(Opcode.LDI, 0, -1, 60),
+				new Word(Opcode.LDI, 7, -1, 61),
+				new Word(Opcode.LDI, 1, -1, 51),
+				new Word(Opcode.LDX, 2, 0, -1),
+				new Word(Opcode.LDX, 3, 7, -1),
+				new Word(Opcode.LDI, 4, -1, 0),
+				new Word(Opcode.LDI, 5, -1, 46),
+				new Word(Opcode.LDI, 6, -1, 8), // Tamanho do vetor
+				// Aumento o vetor
+				new Word(Opcode.ADDI, 6, -1, 0),
+				new Word(Opcode.JMP, -1, -1, 35),
+				// Loop principal
+				new Word(Opcode.ADDI, 0, -1, 1),
+				new Word(Opcode.ADDI, 7, -1, 1),
+				new Word(Opcode.LDX, 2, 0, -1),
+				new Word(Opcode.LDX, 3, 7, -1),
+				new Word(Opcode.SUBI, 6, -1, 1),
+				new Word(Opcode.LDI, 4, -1, 0),
+				new Word(Opcode.ADD, 4, 2, -1),
+				new Word(Opcode.JMPIE, 1, 6, -1),
+				new Word(Opcode.SUB, 2, 3, -1),
+				new Word(Opcode.JMPIG, 5, 2, -1),
+				new Word(Opcode.LDI, 2, -1, 0),
+				new Word(Opcode.ADD, 2, 4, -1),
+				new Word(Opcode.JMP, -1, -1, 33),
+				// Bubble Sort
+				new Word(Opcode.STX, 0, 3, -1),
+				new Word(Opcode.STX, 7, 4, -1),
+				new Word(Opcode.LDI, 2, -1, 0),
+				// new Word(Opcode.LDI, 4, -1, 0),
+				new Word(Opcode.ADD, 2, 4, -1),
+				new Word(Opcode.JMP, -1, -1, 33),
+				// JMP para o loop externo
+				new Word(Opcode.JMP, -1, -1, 21),
+				// FIM DO PROGRAMA
+				new Word(Opcode.STOP, -1, -1, -1)
 		};
 
 	}
