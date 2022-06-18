@@ -8,6 +8,7 @@
 import java.lang.reflect.Array;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Semaphore;
 import java.util.stream.Stream;
 
 public class Sistema {
@@ -26,7 +27,7 @@ public class Sistema {
 		public int r2; // indice do segundo registrador da operacao (Rc ou Rs cfe operacao)
 		public int p; // parametro para instrucao (k ou A cfe operacao), ou o dado, se opcode = DADO
 
-		public Word(Opcode _opc, int _r1, int _r2, int _p) { // Usados pelas instruções não precisa mexer 
+		public Word(Opcode _opc, int _r1, int _r2, int _p) { // Usados pelas instruções não precisa mexer
 			opc = _opc;
 			r1 = _r1;
 			r2 = _r2;
@@ -63,7 +64,7 @@ public class Sistema {
 		private Word[] m; // CPU acessa MEMORIA, guarda referencia 'm' a ela. memoria nao muda. ee sempre
 							// a mesma.
 		GM.tabelaPaginaProcesso pagesProcess;
-		STATE state; //É usado pelo escalonador
+		STATE state; // É usado pelo escalonador
 
 		// =//=//=//=//=//=//=//=//=//=//=//=//=//=//=//=//=
 
@@ -93,7 +94,7 @@ public class Sistema {
 			System.out.println("  ] ");
 		}
 
-		private void showState() {//Faz parte do escalonador
+		private void showState() {// Faz parte do escalonador
 			System.out.println("       " + pc);
 			System.out.print("           ");
 			for (int i = 0; i < reg.length; i++) {
@@ -107,8 +108,8 @@ public class Sistema {
 		}
 
 		private void resetInterrupt() {
-			interrupcaoAtiva = interrupt.None; //Desabilita a interrupção que estiver ativa no momento 
-			DeltaTimer = 5; //Coloca 5 ciclos no timer 
+			interrupcaoAtiva = interrupt.None; // Desabilita a interrupção que estiver ativa no momento
+			DeltaTimer = 5; // Coloca 5 ciclos no timer
 		}
 
 		public void run() { // execucao da CPU supoe que o contexto da CPU, vide acima, esta devidamente
@@ -194,7 +195,7 @@ public class Sistema {
 							pc++;
 							break;
 
-						case SUBI: 
+						case SUBI:
 							reg[ir.r1] = reg[ir.r1] - ir.p;
 							pc++;
 							break;
@@ -207,7 +208,7 @@ public class Sistema {
 							pc = ir.p;
 							break;
 
-						case JMPIL: 
+						case JMPIL:
 							if (reg[ir.r2] < 0) {
 								pc = reg[ir.r1];
 							} else {
@@ -237,7 +238,7 @@ public class Sistema {
 							addressT = vm.gm.translate(ir.p, pagesProcess);
 							pc = m[addressT].p;
 
-						case JMPIGM: // if Rc > 0 then PC <- [A] Else PC <- PC +1 
+						case JMPIGM: // if Rc > 0 then PC <- [A] Else PC <- PC +1
 							if (reg[ir.r2] > 0) {
 								addressT = vm.gm.translate(ir.p, pagesProcess);
 								pc = m[addressT].p;
@@ -304,7 +305,8 @@ public class Sistema {
 						default:
 							// opcode desconhecido
 							// liga interrup (2)
-							interrupcaoAtiva = interrupt.InvalidOpcode; //Chama para instrução ativa do tipo InvalidOpcode
+							interrupcaoAtiva = interrupt.InvalidOpcode; // Chama para instrução ativa do tipo
+																		// InvalidOpcode
 					}
 				} catch (IndexOutOfBoundsException e) { // execoes para acesso a elemento de memoria maior que o
 														// vetor
@@ -404,7 +406,7 @@ public class Sistema {
 	public class Monitor {
 		GP gp;
 
-		public Monitor() {
+		public Monitor() throws InterruptedException {
 			gp = new GP();
 		}
 
@@ -488,7 +490,8 @@ public class Sistema {
 			}
 		}
 
-		public void executa(int id) {  // -------------------------------------------------------------------------------Escalonador -------------------------------
+		public void executa(int id) { // -------------------------------------------------------------------------------Escalonador
+										// -------------------------------
 			vm.cpu.resetInterrupt(); // zera os interruptores
 
 			GP.PCB CurrentProcess = null;
@@ -502,7 +505,8 @@ public class Sistema {
 
 			} else {
 				gp.CurrentProcessGP = CurrentProcess;
-				gp.CurrentProcessGP.setState(STATE.RUNNING); // Muda o estado para execução, assim o escalonador ira saber o que fazer
+				gp.CurrentProcessGP.setState(STATE.RUNNING); // Muda o estado para execução, assim o escalonador ira
+																// saber o que fazer
 
 				vm.cpu.setContext(CurrentProcess.getPc(), CurrentProcess.getTPaginaProcesso(), STATE.RUNNING); // monitor
 																												// seta
@@ -522,6 +526,11 @@ public class Sistema {
 	 * Gerenciador de processos
 	 */
 	public class GP {
+		private Escalonador escalonador;
+
+		public GP() throws InterruptedException {
+			escalonador = new Escalonador();
+		}
 
 		/**
 		 * ListProcess = lista com todos os processos criados que estão em memoria
@@ -536,33 +545,70 @@ public class Sistema {
 			this.uniqueId++;
 			return idReturn;
 		}
+
 		/**
 		 * Escalonador implementa FIFS(First-In First-Served)
-		 * Nao necessita parametros, pois ira acessar a variavel do processo corrente em execucao
+		 * Nao necessita parametros, pois ira acessar a variavel do processo corrente em
+		 * execucao
 		 */
-		public void Escalonador() {
-			
-			//Salva o contexto
-			if(CurrentProcessGP != null) {//verifica se o processo atual não é nulo
-				CurrentProcessGP.setPc(vm.cpu.pc);
+
+		/**
+		 * Escalonador libera o semaforo para novo escalonamento
+		 */
+		public void Escalonador(){
+			monitor.gp.escalonador.semaphoreScheduler.release();
+		}
+
+		/**
+		 * Implementa rotinas de escalonamento com controle de concorrencia
+		 */
+		public class Escalonador extends Thread {
+			public Semaphore semaphoreScheduler;
+
+			public Escalonador() throws InterruptedException {
+				semaphoreScheduler = new Semaphore(1);
 				
-				if(CurrentProcessGP.state == STATE.RUNNING)
-					CurrentProcessGP.setState(STATE.READY);//(re)coloca o estado atual como pronto
+				semaphoreScheduler.acquire();//trava o semaforo inicial
+				
+				start();
 			}
-			ArrayList<Integer> ReadyProcess = new ArrayList<>();
-			ListProcess.stream()
-						.filter(e -> e.getState() == STATE.READY)
-						.forEach(a -> ReadyProcess.add(a.getId())); // Filtra processos em estadosgetId() pronto
 
-			if(ReadyProcess.size() == 0) {
-				System.out.println("Sem processos prontos para execucao...");
-			}else{
+			public void run() {
 
-			System.out.println("processos prontos ID: ");
-			ReadyProcess.stream().forEach(e -> System.out.print("|"+e+"|"));
-			System.out.println();
-			
-			monitor.executa(ReadyProcess.get(0));//executa o primeiro processo filtrado do estado pronto
+				while (true) {
+					// aguarda bloqueado
+					try {
+						
+						semaphoreScheduler.acquire();
+						// Salva o contexto
+						if (CurrentProcessGP != null) {// verifica se o processo atual não é nulo
+							CurrentProcessGP.setPc(vm.cpu.pc);
+
+							if (CurrentProcessGP.state == STATE.RUNNING)
+								CurrentProcessGP.setState(STATE.READY);// (re)coloca o estado atual como pronto
+						}
+						ArrayList<Integer> ReadyProcess = new ArrayList<>();
+						ListProcess.stream()
+								.filter(e -> e.getState() == STATE.READY)
+								.forEach(a -> ReadyProcess.add(a.getId())); // Filtra processos em estadosgetId() pronto
+
+						if (ReadyProcess.size() == 0) {
+							System.out.println("Sem processos prontos para execucao...");
+						} else {
+
+							System.out.println("processos prontos ID: ");
+							ReadyProcess.stream().forEach(e -> System.out.print("|" + e + "|"));
+							System.out.println();
+
+							monitor.executa(ReadyProcess.get(0));// executa o primeiro processo filtrado do estado
+																	// pronto
+						}
+					} catch (InterruptedException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+
+				}
 			}
 		}
 
@@ -585,7 +631,7 @@ public class Sistema {
 			if (sucessAlocation) {
 				int id = getUniqueId(); // id igual o ultimo tamanho do array de processos
 				monitor.carga(programa, vm.m, newPages);
-				PCB P = new PCB(id, 0, newPages); 
+				PCB P = new PCB(id, 0, newPages);
 				ListProcess.add(P);
 				return id;
 			}
@@ -827,7 +873,7 @@ public class Sistema {
 	public Monitor monitor;
 	public static Programas progs;
 
-	public Sistema() { // a VM com tratamento de interrupções
+	public Sistema() throws InterruptedException { // a VM com tratamento de interrupções
 		vm = new VM();
 		monitor = new Monitor();
 		progs = new Programas();
@@ -895,8 +941,8 @@ public class Sistema {
 							break; // break criaProcesso
 
 						case "executa":
-							//id = Integer.parseInt(inputParams[1]);
-							//s.monitor.executa(id);
+							// id = Integer.parseInt(inputParams[1]);
+							// s.monitor.executa(id);
 							System.out.println("A EXECUTAR");
 							monitor.gp.Escalonador();
 							break;
@@ -955,7 +1001,7 @@ public class Sistema {
 
 		}
 
-	}//---------------------------------------------------------------------------------------------------------------------------------------------------------
+	}// ---------------------------------------------------------------------------------------------------------------------------------------------------------
 
 	/*
 	 * /**
@@ -1002,7 +1048,7 @@ public class Sistema {
 
 	// -------------------------------------------------------------------------------------------------------
 	// ------------------- instancia e testa sistema
-	public static void main(String args[]) {
+	public static void main(String args[]) throws InterruptedException {
 		Sistema s = new Sistema();
 		s.showConfiguration();
 		Terminal terminal = s.new Terminal(s);
