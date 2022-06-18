@@ -8,6 +8,7 @@
 import java.lang.reflect.Array;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Stream;
 
 public class Sistema {
 
@@ -540,20 +541,29 @@ public class Sistema {
 		 * Nao necessita parametros, pois ira acessar a variavel do processo corrente em execucao
 		 */
 		public void Escalonador() {
-			if(CurrentProcessGP == null)
-			CurrentProcessGP.setState(STATE.READY);//(re)coloca o estado atual como pronto
-
-			ArrayList<PCB> ReadyProcess = (ArrayList<Sistema.GP.PCB>) ListProcess.stream()
-					.filter(e -> e.getState() == STATE.READY); // Filtra processos em estados pronto
-
-			System.out.println("processos prontos");
-			ReadyProcess.stream().forEach(e -> System.out.println(e.getId()));
 			
-			PCB Escalonado = ReadyProcess.get(0);//obtem o primeiro da fila
-			monitor.executa(Escalonado.getId());//executa o primeiro processo filtrado do estado pronto
-		}
-		private void extracted(Sistema.GP.PCB e) {
-			System.out.println(e.getId());
+			//Salva o contexto
+			if(CurrentProcessGP != null) {//verifica se o processo atual não é nulo
+				CurrentProcessGP.setPc(vm.cpu.pc);
+				
+				if(CurrentProcessGP.state == STATE.RUNNING)
+					CurrentProcessGP.setState(STATE.READY);//(re)coloca o estado atual como pronto
+			}
+			ArrayList<Integer> ReadyProcess = new ArrayList<>();
+			ListProcess.stream()
+						.filter(e -> e.getState() == STATE.READY)
+						.forEach(a -> ReadyProcess.add(a.getId())); // Filtra processos em estadosgetId() pronto
+
+			if(ReadyProcess.size() == 0) {
+				System.out.println("Sem processos prontos para execucao...");
+			}else{
+
+			System.out.println("processos prontos ID: ");
+			ReadyProcess.stream().forEach(e -> System.out.print("|"+e+"|"));
+			System.out.println();
+			
+			monitor.executa(ReadyProcess.get(0));//executa o primeiro processo filtrado do estado pronto
+			}
 		}
 
 		/**
@@ -976,6 +986,7 @@ public class Sistema {
 		if (i == interrupt.Stop) {
 			monitor.gp.desalocaProcesso(monitor.gp.CurrentProcessGP.getId());
 			System.out.println("Fim da execucao do programa");
+			monitor.gp.Escalonador();
 		}
 
 		if (i == interrupt.Timer) {
