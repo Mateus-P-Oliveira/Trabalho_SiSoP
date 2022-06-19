@@ -6,8 +6,12 @@
 //Teste de commit
 
 import java.lang.reflect.Array;
+import java.nio.Buffer;
+import java.sql.Time;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 public class Sistema {
@@ -26,7 +30,7 @@ public class Sistema {
 		public int r2; // indice do segundo registrador da operacao (Rc ou Rs cfe operacao)
 		public int p; // parametro para instrucao (k ou A cfe operacao), ou o dado, se opcode = DADO
 
-		public Word(Opcode _opc, int _r1, int _r2, int _p) { // Usados pelas instruções não precisa mexer 
+		public Word(Opcode _opc, int _r1, int _r2, int _p) { // Usados pelas instruções não precisa mexer
 			opc = _opc;
 			r1 = _r1;
 			r2 = _r2;
@@ -48,28 +52,56 @@ public class Sistema {
 	}
 
 	public enum interrupt { // interrupcoes da CPU //Enum serve como const do C++
-		None, Overflow, InvalidOpcode, InvalidAdrress, Stop, Timer;
+		None, Overflow, InvalidOpcode, InvalidAdrress, Stop, Timer, Trap, intIO;
 	}
 
-	public class CPU {
+	public class Timer extends Thread {
+		public Timer() {
+			start();
+		}
+
+		public void run() {
+			while (true) {
+				// verifica se não
+				if (vm.cpu.interrupcaoAtiva == interrupt.None
+						&& vm.cpu.semaphoreCPU.availablePermits() == 0) {
+					vm.cpu.interrupcaoAtiva = interrupt.Timer;
+				}
+				try {
+					sleep(3000);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+
+	}
+
+	public class CPU extends Thread {
 		// característica do processador: contexto da CPU ...
 		private int pc; // ... composto de program counter,
 		private Word ir; // instruction register,
 		private int[] reg; // registradores da CPU
 
 		interrupt interrupcaoAtiva; // interrupcao a ser guardada pelo processador;
-		int DeltaTimer; // Varial para simultar o Timer para interrupção TIMER no processado
+		Semaphore semaphoreCPU;
 
 		private Word[] m; // CPU acessa MEMORIA, guarda referencia 'm' a ela. memoria nao muda. ee sempre
 							// a mesma.
 		GM.tabelaPaginaProcesso pagesProcess;
-		STATE state; //É usado pelo escalonador
+		STATE state; // É usado pelo escalonador
 
 		// =//=//=//=//=//=//=//=//=//=//=//=//=//=//=//=//=
 
-		public CPU(Word[] _m) { // ref a MEMORIA e interrupt handler passada na criacao da CPU
+		public CPU(Word[] _m) throws InterruptedException { // ref a MEMORIA e interrupt handler passada na criacao da
+															// CPU
 			m = _m; // usa o atributo 'm' para acessar a memoria.
 			reg = new int[10]; // aloca o espaço dos registradores
+			semaphoreCPU = new Semaphore(1);
+			semaphoreCPU.acquire(); // trava CPU ao iniciar o SISTEMA
+			new Timer(); // inicial relogio de escalonamento
+			start();
 		}
 
 		public void setContext(int _pc, GM.tabelaPaginaProcesso pagesProcess, STATE state) { // no futuro esta funcao
@@ -93,7 +125,7 @@ public class Sistema {
 			System.out.println("  ] ");
 		}
 
-		private void showState() {//Faz parte do escalonador
+		private void showState() {// Faz parte do escalonador
 			System.out.println("       " + pc);
 			System.out.print("           ");
 			for (int i = 0; i < reg.length; i++) {
@@ -107,221 +139,250 @@ public class Sistema {
 		}
 
 		private void resetInterrupt() {
-			interrupcaoAtiva = interrupt.None; //Desabilita a interrupção que estiver ativa no momento 
-			DeltaTimer = 5; //Coloca 5 ciclos no timer 
+			interrupcaoAtiva = interrupt.None; // Desabilita a interrupção que estiver ativa no momento
 		}
 
-		public void run() { // execucao da CPU supoe que o contexto da CPU, vide acima, esta devidamente
+		/**
+		 * Libera o semaforo da CPU.
+		 * {@code semaphoreCPU.release()}
+		 */
+		public void setRunning() {
+			semaphoreCPU.release();
+		}
+
+		public void run() { // execucao da CPU supoe que o contexto da CPU, vide acima, esta devidamente //
 							// setado
-			boolean stateRun = true;
-			while (stateRun) { // ciclo de instrucoes. acaba cfe instrucao, veja cada caso.
+			while (true) {
 				try {
-					// FETCH
-					int addressT = vm.gm.translate(pc, pagesProcess);
-					int addressT_2; // usado como reserva em caso especifico
-					ir = m[addressT]; // busca posicao da memoria apontada por pc, guarda em ir
-					// if debug
-					showState();
-					// EXECUTA INSTRUCAO NO ir
-					switch (ir.opc) { // para cada opcode, sua execução
+					semaphoreCPU.acquire();
+					boolean stateRun = true;
+					while (stateRun) { // ciclo de instrucoes. acaba cfe instrucao, veja cada caso.
+						try {
+							// FETCH
+							int addressT = vm.gm.translate(pc, pagesProcess);
+							int addressT_2; // usado como reserva em caso especifico
+							ir = m[addressT]; // busca posicao da memoria apontada por pc, guarda em ir
+							// if debug
+							showState();
+							// EXECUTA INSTRUCAO NO ir
+							switch (ir.opc) { // para cada opcode, sua execução
 
-						case STD: // [A] <- Rs
-							addressT = vm.gm.translate(ir.p, pagesProcess); // address assume o valor traduzido de ir.p
-							m[addressT].opc = Opcode.DATA;
-							m[addressT].p = reg[ir.r1];
-							pc++;
-							break;
+								case STD: // [A] <- Rs
+									addressT = vm.gm.translate(ir.p, pagesProcess); // address assume o valor traduzido
+																					// de
+																					// ir.p
+									m[addressT].opc = Opcode.DATA;
+									m[addressT].p = reg[ir.r1];
+									pc++;
+									break;
 
-						case LDI: // Rd <- k
-							reg[ir.r1] = ir.p;
-							pc++;
-							break;
+								case LDI: // Rd <- k
+									reg[ir.r1] = ir.p;
+									pc++;
+									break;
 
-						case LDD: // Rd <- [A] //Here
-							// m[ir.p].opc = Opcode.DATA; //Leitura não precisa saber se é um dado
-							addressT = vm.gm.translate(ir.r1, pagesProcess); // address assume o valor traduzido de
-																				// ir.r1
-							addressT_2 = vm.gm.translate(ir.p, pagesProcess);
-							reg[addressT] = m[addressT_2].p; // Ajustar para memoria
-							pc++;
-							break;
+								case LDD: // Rd <- [A] //Here
+									// m[ir.p].opc = Opcode.DATA; //Leitura não precisa saber se é um dado
+									addressT = vm.gm.translate(ir.r1, pagesProcess); // address assume o valor traduzido
+																						// de
+																						// ir.r1
+									addressT_2 = vm.gm.translate(ir.p, pagesProcess);
+									reg[addressT] = m[addressT_2].p; // Ajustar para memoria
+									pc++;
+									break;
 
-						case LDX: // Rd <- [Rs] // Here
-							// m[reg[ir.r2]].opc = Opcode.DATA; //Leitura não precisa saber o que é feito
-							reg[ir.r1] = m[reg[ir.r2]].p; // Corrigido para pegar os dados internos
-							pc++;
-							break;
+								case LDX: // Rd <- [Rs] // Here
+									// m[reg[ir.r2]].opc = Opcode.DATA; //Leitura não precisa saber o que é feito
+									reg[ir.r1] = m[reg[ir.r2]].p; // Corrigido para pegar os dados internos
+									pc++;
+									break;
 
-						case STX: // [Rd] <- Rs
-							addressT = vm.gm.translate(reg[ir.r1], pagesProcess);
-							m[addressT].opc = Opcode.DATA;
-							m[addressT].p = reg[ir.r2];
-							pc++;
-							break;
+								case STX: // [Rd] <- Rs
+									addressT = vm.gm.translate(reg[ir.r1], pagesProcess);
+									m[addressT].opc = Opcode.DATA;
+									m[addressT].p = reg[ir.r2];
+									pc++;
+									break;
 
-						case ADD: // Rd <- Rd + Rs
-							reg[ir.r1] = reg[ir.r1] + reg[ir.r2];
-							pc++;
-							break;
+								case ADD: // Rd <- Rd + Rs
+									reg[ir.r1] = reg[ir.r1] + reg[ir.r2];
+									pc++;
+									break;
 
-						case MULT: // Rd <- Rd * Rs
+								case MULT: // Rd <- Rd * Rs
 
-							try {
-								long tmp = (long) reg[ir.r1] * (long) reg[ir.r2];
-								if (tmp >= Integer.MAX_VALUE) {
-									throw new Exception("Erro de multiplicacao");
-								} else {
-									reg[ir.r1] = reg[ir.r1] * reg[ir.r2];
-								}
-								pc++;
-							} catch (Exception e) {
-								// gera um overflow
-								// --> LIGA INT (1)
-								interrupcaoAtiva = interrupt.Overflow;
+									try {
+										long tmp = (long) reg[ir.r1] * (long) reg[ir.r2];
+										if (tmp >= Integer.MAX_VALUE) {
+											throw new Exception("Erro de multiplicacao");
+										} else {
+											reg[ir.r1] = reg[ir.r1] * reg[ir.r2];
+										}
+										pc++;
+									} catch (Exception e) {
+										// gera um overflow
+										// --> LIGA INT (1)
+										interrupcaoAtiva = interrupt.Overflow;
+									}
+
+									break;
+
+								case ADDI: // Rd <- Rd + k
+
+									reg[ir.r1] = reg[ir.r1] + ir.p;
+									pc++;
+									break;
+
+								case SUB: // Rd <- Rd - Rs
+
+									reg[ir.r1] = reg[ir.r1] - reg[ir.r2];
+									pc++;
+									break;
+
+								case SUBI:
+									reg[ir.r1] = reg[ir.r1] - ir.p;
+									pc++;
+									break;
+
+								case JMPI:
+									pc = ir.r1;
+									break;
+
+								case JMP: // PC <- k
+									pc = ir.p;
+									break;
+
+								case JMPIL:
+									if (reg[ir.r2] < 0) {
+										pc = reg[ir.r1];
+									} else {
+										pc++;
+									}
+									break;
+
+								case JMPIG: // If Rc > 0 Then PC <- Rs Else PC <- PC +1
+
+									if (reg[ir.r2] > 0) {
+										pc = reg[ir.r1];
+									} else {
+										pc++;
+									}
+									break;
+
+								case JMPIE: // If Rc = 0 Then PC <- Rs Else PC <- PC +1
+
+									if (reg[ir.r2] == 0) {
+										pc = reg[ir.r1];
+									} else {
+										pc++;
+									}
+									break;
+
+								case JMPIM:
+									addressT = vm.gm.translate(ir.p, pagesProcess);
+									pc = m[addressT].p;
+
+								case JMPIGM: // if Rc > 0 then PC <- [A] Else PC <- PC +1
+									if (reg[ir.r2] > 0) {
+										addressT = vm.gm.translate(ir.p, pagesProcess);
+										pc = m[addressT].p;
+									} else {
+										pc++;
+									}
+									break;
+
+								case JMPILM: // if Rc < 0 then PC <- [A] Else PC <- PC +1 //Here
+									if (reg[ir.r2] < 0) {
+										addressT = vm.gm.translate(ir.p, pagesProcess);
+										pc = m[addressT].p;
+									} else {
+										pc++;
+									}
+									break;
+
+								case JMPIEM: // if Rc = 0 then PC <- [A] Else PC <- PC +1
+									if (reg[ir.r2] == 0) {
+										addressT = vm.gm.translate(ir.p, pagesProcess);
+										pc = m[addressT].p;
+									} else {
+										pc++;
+									}
+									break;
+
+								case JMPGE: // Jump Greater Equal Adicionar no pdf
+									if (reg[ir.r2] >= 0) {
+										pc = reg[ir.r1];
+									} else {
+										pc++;
+									}
+									break;
+
+								case TRAP:
+									interrupcaoAtiva = interrupt.Trap;
+
+									/*
+									 * if (reg[8] == 1) { // Verificado o valor dentro do registrador 8 || TRAP = 1
+									 * ->
+									 * // chamada
+									 * // de
+									 * // IN
+									 * System.out.println("Requerimento de IO, pressione enter para continuar...");
+									 * semaphoreTerminal.acquire();
+									 * Scanner myObj = new Scanner(System.in); // instancia leituras do java
+									 * System.out.print("Input integer: ");
+									 * String inputUser = myObj.next(); // le o numero do usuario
+									 * System.out.println("VALOR LIDO = " + inputUser);
+									 * addressT = vm.gm.translate(reg[9], pagesProcess);
+									 * m[addressT].p = Integer.parseInt(inputUser); // conforme a entrada e salva na
+									 * // posição da
+									 * // memoria
+									 * m[addressT].opc = Opcode.DATA;
+									 * semaphoreTerminal.release();
+									 * // Conforme exemplo do professor
+									 * // || reg[9] (obtem o valor dentro do registrador) =4, entao, m[4], logo m[4]
+									 * <-
+									 * // input
+									 * }
+									 * 
+									 * if (reg[8] == 2) { // TRAP = 2 -> chamada de OUT
+									 * addressT = vm.gm.translate(reg[9], pagesProcess);
+									 * int output = m[addressT].p; // reg[9]=10, logo, m[10] || output <- m[10]
+									 * System.out.println(output);
+									 * // ?? forma flexíveL, verificar ultima especificacao da Fase3
+									 * }
+									 */
+									pc++;
+									break;
+
+								case STOP: // por enquanto, para execucao
+									interrupcaoAtiva = interrupt.Stop; // Chama instrução Ativa do tipo Stop
+									break;
+								default:
+									// opcode desconhecido*
+									// liga interrup (2)
+									if(interrupcaoAtiva != interrupt.None) //podem haver interrupcoes para chamada
+										interrupcaoAtiva = interrupt.InvalidOpcode; // Chama para instrução ativa do tipo
+																				// InvalidOpcode
 							}
+						} catch (IndexOutOfBoundsException e) { // execoes para acesso a elemento de memoria maior que o
+																// vetor
+							interrupcaoAtiva = interrupt.InvalidAdrress;
+						}
 
-							break;
+						// VERIFICA INTERRUPÇÃO !!! - TERCEIRA FASE DO CICLO DE INSTRUÇÕES
+						// if int ligada - vai para tratamento da int
+						// desviar para rotina java que trata int
+						if (interrupcaoAtiva != interrupt.None) {
+							stateRun = false; // para execucao do loop while/programa
+							trataTnterrupcoes(interrupcaoAtiva); // trata interrupcao
+						}
 
-						case ADDI: // Rd <- Rd + k
-
-							reg[ir.r1] = reg[ir.r1] + ir.p;
-							pc++;
-							break;
-
-						case SUB: // Rd <- Rd - Rs
-
-							reg[ir.r1] = reg[ir.r1] - reg[ir.r2];
-							pc++;
-							break;
-
-						case SUBI: 
-							reg[ir.r1] = reg[ir.r1] - ir.p;
-							pc++;
-							break;
-
-						case JMPI:
-							pc = ir.r1;
-							break;
-
-						case JMP: // PC <- k
-							pc = ir.p;
-							break;
-
-						case JMPIL: 
-							if (reg[ir.r2] < 0) {
-								pc = reg[ir.r1];
-							} else {
-								pc++;
-							}
-							break;
-
-						case JMPIG: // If Rc > 0 Then PC <- Rs Else PC <- PC +1
-
-							if (reg[ir.r2] > 0) {
-								pc = reg[ir.r1];
-							} else {
-								pc++;
-							}
-							break;
-
-						case JMPIE: // If Rc = 0 Then PC <- Rs Else PC <- PC +1
-
-							if (reg[ir.r2] == 0) {
-								pc = reg[ir.r1];
-							} else {
-								pc++;
-							}
-							break;
-
-						case JMPIM:
-							addressT = vm.gm.translate(ir.p, pagesProcess);
-							pc = m[addressT].p;
-
-						case JMPIGM: // if Rc > 0 then PC <- [A] Else PC <- PC +1 
-							if (reg[ir.r2] > 0) {
-								addressT = vm.gm.translate(ir.p, pagesProcess);
-								pc = m[addressT].p;
-							} else {
-								pc++;
-							}
-							break;
-
-						case JMPILM: // if Rc < 0 then PC <- [A] Else PC <- PC +1 //Here
-							if (reg[ir.r2] < 0) {
-								addressT = vm.gm.translate(ir.p, pagesProcess);
-								pc = m[addressT].p;
-							} else {
-								pc++;
-							}
-							break;
-
-						case JMPIEM: // if Rc = 0 then PC <- [A] Else PC <- PC +1
-							if (reg[ir.r2] == 0) {
-								addressT = vm.gm.translate(ir.p, pagesProcess);
-								pc = m[addressT].p;
-							} else {
-								pc++;
-							}
-							break;
-
-						case JMPGE: // Jump Greater Equal Adicionar no pdf
-							if (reg[ir.r2] >= 0) {
-								pc = reg[ir.r1];
-							} else {
-								pc++;
-							}
-							break;
-
-						case TRAP:
-
-							if (reg[8] == 1) { // Verificado o valor dentro do registrador 8 || TRAP = 1 -> chamada de
-												// IN
-								Scanner myObj = new Scanner(System.in); // instancia leituras do java
-								System.out.print("Input integer: ");
-								String inputUser = myObj.nextLine(); // le o numero do usuario
-
-								addressT = vm.gm.translate(reg[9], pagesProcess);
-								m[addressT].p = Integer.parseInt(inputUser); // conforme a entrada e salva na posição da
-																				// memoria
-								m[addressT].opc = Opcode.DATA;
-								// Conforme exemplo do professor
-								// || reg[9] (obtem o valor dentro do registrador) =4, entao, m[4], logo m[4] <-
-								// input
-							}
-
-							if (reg[8] == 2) { // TRAP = 2 -> chamada de OUT
-								addressT = vm.gm.translate(reg[9], pagesProcess);
-								int output = m[addressT].p; // reg[9]=10, logo, m[10] || output <- m[10]
-								System.out.println(output);
-								// ?? forma flexíveL, verificar ultima especificacao da Fase3
-							}
-							pc++;
-							break;
-
-						case STOP: // por enquanto, para execucao
-							interrupcaoAtiva = interrupt.Stop; // Chama instrução Ativa do tipo Stop
-							break;
-						default:
-							// opcode desconhecido
-							// liga interrup (2)
-							interrupcaoAtiva = interrupt.InvalidOpcode; //Chama para instrução ativa do tipo InvalidOpcode
 					}
-				} catch (IndexOutOfBoundsException e) { // execoes para acesso a elemento de memoria maior que o
-														// vetor
-					interrupcaoAtiva = interrupt.InvalidAdrress;
+				} catch (InterruptedException e1) {
+					// TODO Auto-generated catch block
+					System.out.println(getClass().getName() + ":" + e1);
+					e1.printStackTrace();
 				}
-				// Decremento do timer
-				DeltaTimer--;
-				if (DeltaTimer == 0)
-					interrupcaoAtiva = interrupcaoAtiva.Timer;
-				// VERIFICA INTERRUPÇÃO !!! - TERCEIRA FASE DO CICLO DE INSTRUÇÕES
-				// if int ligada - vai para tratamento da int
-				// desviar para rotina java que trata int
-				if (interrupcaoAtiva != interrupt.None) {
-					trataTnterrupcoes(interrupcaoAtiva); // trata interrupcao
-					stateRun = false; // para execucao do loop while/programa
-				}
-
 			}
 		}
 	}
@@ -350,7 +411,7 @@ public class Sistema {
 		 * }
 		 */
 
-		public VM() {
+		public VM() throws InterruptedException {
 			// memória
 			tamMem = 1024;
 			m = new Word[tamMem]; // m ee a memoria
@@ -404,7 +465,7 @@ public class Sistema {
 	public class Monitor {
 		GP gp;
 
-		public Monitor() {
+		public Monitor() throws InterruptedException {
 			gp = new GP();
 		}
 
@@ -488,7 +549,8 @@ public class Sistema {
 			}
 		}
 
-		public void executa(int id) {  // -------------------------------------------------------------------------------Escalonador -------------------------------
+		public void executa(int id) { // -------------------------------------------------------------------------------Escalonador
+										// -------------------------------
 			vm.cpu.resetInterrupt(); // zera os interruptores
 
 			GP.PCB CurrentProcess = null;
@@ -502,16 +564,13 @@ public class Sistema {
 
 			} else {
 				gp.CurrentProcessGP = CurrentProcess;
-				gp.CurrentProcessGP.setState(STATE.RUNNING); // Muda o estado para execução, assim o escalonador ira saber o que fazer
+				gp.CurrentProcessGP.setState(STATE.RUNNING); // Muda o estado para execução, assim o escalonador ira
+																// saber o que fazer
 
 				vm.cpu.setContext(CurrentProcess.getPc(), CurrentProcess.getTPaginaProcesso(), STATE.RUNNING); // monitor
-																												// seta
-																												// contexto
-				// - pc aponta para
-				// inicio do programa
-				vm.cpu.run(); // e cpu executa
-								// note aqui que o monitor espera que o programa carregado acabe normalmente
-								// nao ha protecoes... o que poderia acontecer ?
+				// libera CPU
+				vm.cpu.setRunning(); // seta
+				// contexto
 			}
 		}
 
@@ -522,6 +581,11 @@ public class Sistema {
 	 * Gerenciador de processos
 	 */
 	public class GP {
+		private Escalonador escalonador;
+
+		public GP() throws InterruptedException {
+			escalonador = new Escalonador();
+		}
 
 		/**
 		 * ListProcess = lista com todos os processos criados que estão em memoria
@@ -536,33 +600,72 @@ public class Sistema {
 			this.uniqueId++;
 			return idReturn;
 		}
+
 		/**
 		 * Escalonador implementa FIFS(First-In First-Served)
-		 * Nao necessita parametros, pois ira acessar a variavel do processo corrente em execucao
+		 * Nao necessita parametros, pois ira acessar a variavel do processo corrente em
+		 * execucao
+		 */
+
+		/**
+		 * Escalonador libera o semaforo para novo escalonamento
 		 */
 		public void Escalonador() {
-			
-			//Salva o contexto
-			if(CurrentProcessGP != null) {//verifica se o processo atual não é nulo
-				CurrentProcessGP.setPc(vm.cpu.pc);
-				
-				if(CurrentProcessGP.state == STATE.RUNNING)
-					CurrentProcessGP.setState(STATE.READY);//(re)coloca o estado atual como pronto
+			monitor.gp.escalonador.semaphoreScheduler.release();
+		}
+
+		/**
+		 * Implementa rotinas de escalonamento com controle de concorrencia
+		 */
+		public class Escalonador extends Thread {
+			public Semaphore semaphoreScheduler;
+
+			public Escalonador() throws InterruptedException {
+				semaphoreScheduler = new Semaphore(1);
+				semaphoreScheduler.acquire();// trava o semaforo inicial
+				start();
 			}
-			ArrayList<Integer> ReadyProcess = new ArrayList<>();
-			ListProcess.stream()
-						.filter(e -> e.getState() == STATE.READY)
-						.forEach(a -> ReadyProcess.add(a.getId())); // Filtra processos em estadosgetId() pronto
 
-			if(ReadyProcess.size() == 0) {
-				System.out.println("Sem processos prontos para execucao...");
-			}else{
+			public void run() {
 
-			System.out.println("processos prontos ID: ");
-			ReadyProcess.stream().forEach(e -> System.out.print("|"+e+"|"));
-			System.out.println();
-			
-			monitor.executa(ReadyProcess.get(0));//executa o primeiro processo filtrado do estado pronto
+				while (true) {
+					// aguarda bloqueado
+					try {
+
+						semaphoreScheduler.acquire();
+						// Salva o contexto
+						if (CurrentProcessGP != null) {// verifica se o processo atual não é nulo
+							CurrentProcessGP.setPc(vm.cpu.pc);
+
+							if (CurrentProcessGP.state == STATE.RUNNING)
+								CurrentProcessGP.setState(STATE.READY);// (re)coloca o estado atual como pronto
+						}
+						ArrayList<Integer> ReadyProcess = new ArrayList<>();
+						ListProcess.stream()
+								.filter(e -> e.getState() == STATE.READY)
+								.forEach(a -> ReadyProcess.add(a.getId())); // Filtra processos em estadosgetId() pronto
+
+						if (ReadyProcess.size() != 0) {						
+
+							System.out.println("processos prontos ID: ");
+							ReadyProcess.stream().forEach(e -> System.out.print("|" + e + "|"));
+							System.out.println();
+
+							monitor.executa(ReadyProcess.get(0));// executa o primeiro processo filtrado do estado
+																	// pronto
+
+						}
+						else{
+							System.out.println("Sem processos prontos para execucao...");				
+						}					
+
+					} catch (InterruptedException e1) {
+						// TODO Auto-generated catch block
+						System.out.println(e1);
+						e1.printStackTrace();
+					}
+
+				}
 			}
 		}
 
@@ -585,7 +688,7 @@ public class Sistema {
 			if (sucessAlocation) {
 				int id = getUniqueId(); // id igual o ultimo tamanho do array de processos
 				monitor.carga(programa, vm.m, newPages);
-				PCB P = new PCB(id, 0, newPages); 
+				PCB P = new PCB(id, 0, newPages);
 				ListProcess.add(P);
 				return id;
 			}
@@ -650,6 +753,8 @@ public class Sistema {
 						return "Ready";
 					case RUNNING:
 						return "Running";
+					case BLOCKED:
+						return "Blocked";
 					default:
 						return "STATE FAILED!";
 
@@ -826,136 +931,292 @@ public class Sistema {
 	public VM vm;
 	public Monitor monitor;
 	public static Programas progs;
+	public Terminal terminal;
+	public ConsoleIO console;
+	public TratamentoIO tratamentoIO;
 
-	public Sistema() { // a VM com tratamento de interrupções
-		vm = new VM();
+	public Sistema() throws InterruptedException { // a VM com tratamento de interrupções
 		monitor = new Monitor();
 		progs = new Programas();
+		vm = new VM();
+	}
+
+	public void SystemInterfacesIO(Sistema s) throws InterruptedException {
+		terminal = new Terminal(s);
+		console = new ConsoleIO(s);
+		tratamentoIO = new TratamentoIO(s);
 
 	}
 
-	public class Terminal extends Thread {
+	public class TratamentoIO {
 		Sistema s;
+		/**
+		 * buffer da chamada IO (TRAP) da CPU
+		 */
+		LinkedList<PedidosConsole> bufferChamadaIO = new LinkedList<>();
+
+		/**
+		 * buffer que recebe a interrupcao de IO da CPU para consumir
+		 */
+		LinkedList<PedidosConsole> bufferReturnIO = new LinkedList<>();
+
+		public TratamentoIO(Sistema s) {
+			this.s = s;
+		}
+
+		public void trataRotinaIO() {
+			// consome o buffer das rotinas de IO retornadas e tratadas
+			while (bufferReturnIO.size() != 0) {
+
+				bufferReturnIO.peek().processo.setState(STATE.READY);// passa processo para pronto
+				monitor.executa(bufferReturnIO.peek().processo.getId()); // executa o processo que retornou IO
+				bufferReturnIO.removeFirst();
+
+			}
+
+		}
+
+		public void chamadaIO() {
+
+			s.monitor.gp.CurrentProcessGP.setState(STATE.BLOCKED);
+			// O contexto ProgramCounter é feito pelo escalonador
+
+			PedidosConsole pedidosConsole = new PedidosConsole(vm.cpu.reg[8], vm.cpu.reg[9],
+					s.monitor.gp.CurrentProcessGP);
+
+			bufferChamadaIO.add(pedidosConsole);
+			s.monitor.gp.Escalonador();
+
+		}
+
+	}
+
+	/**
+	 * Estrutura para fila de pedidos da console
+	 */
+	public class PedidosConsole {
+		int reg8;
+		int reg9;
+		GP.PCB processo;
+
+		/**
+		 * 
+		 * @param reg8    = tipo IO (input/output)
+		 * @param reg9    = posicao da memoria
+		 * @param proceso = processo que solicitou IO
+		 */
+		public PedidosConsole(int reg8, int reg9, GP.PCB proceso) {
+			this.reg8 = reg8;
+			this.reg9 = reg9;
+			this.processo = proceso;
+		}
+
+	}
+
+	public class ConsoleIO extends Thread {
+		Sistema s;
+		// pedidosConsole[2] | [1] reg8 (input/output) || [2] reg[9] posicao memoria
+
+		public ConsoleIO(Sistema s) throws InterruptedException {
+			this.s = s;
+			start();
+		}
+
+		public void run() {
+			while (true) {
+				while (tratamentoIO.bufferChamadaIO.size() != 0) {
+
+					int reg8 = tratamentoIO.bufferChamadaIO.peek().reg8;
+					int reg9 = tratamentoIO.bufferChamadaIO.peek().reg9;
+					GP.PCB processInBuffer = tratamentoIO.bufferChamadaIO.peek().processo;
+
+					if (reg8 == 1) { // Verificado o valor dentro do registrador 8 || TRAP = 1 ->
+										// chamada
+										// de
+										// IN
+						
+						try {
+
+							// pausa a thread do Shell para não concorrer o input
+							terminal.semaphoreTerminal.acquire();
+							System.out.println("Requerimento de IO, pressione enter para continuar...");							
+							Scanner myObj = new Scanner(System.in); // instancia leituras do java
+							System.out.print("Input integer: ");
+							String inputUser = myObj.next(); // le o numero do usuario
+							System.out.println("VALOR LIDO = " + inputUser);
+							int addressT = vm.gm.translate(reg9, processInBuffer.tPaginaProcesso);
+
+							vm.m[addressT].p = Integer.parseInt(inputUser); // conforme a entrada e salva na
+																			// posição da
+																			// memoria
+							vm.m[addressT].opc = Opcode.DATA;
+							terminal.semaphoreTerminal.release();
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+
+					}
+
+					if (reg8 == 2) { // TRAP = 2 -> chamada de OUT
+						int addressT = vm.gm.translate(reg9, processInBuffer.tPaginaProcesso);
+						int output = vm.m[addressT].p; // reg[9]=10, logo, m[10] || output <- m[10]
+						System.out.println(output);
+						// ?? forma flexíveL, verificar ultima especificacao da Fase3
+					}
+					
+					while(vm.cpu.interrupcaoAtiva!=interrupt.None){ 
+						// avisa CPU que o IO foi feito (aguarda se houver interrucao ativa)
+						vm.cpu.interrupcaoAtiva = interrupt.intIO;
+						vm.cpu.semaphoreCPU.release();
+
+					}
+
+					tratamentoIO.bufferChamadaIO.removeFirst(); //tira o IO tratado
+
+				}
+			}
+		}
+	}
+
+	public class Terminal extends Thread {
+
+		Sistema s;
+		Semaphore semaphoreTerminal;
 
 		public Terminal(Sistema s) {
 			this.s = s;
+			semaphoreTerminal = new Semaphore(1);
+			start();
 		}
+
 
 		public void run() {
 			boolean SystemRun = true;
 			Scanner scanner = new Scanner(System.in);
 			while (SystemRun) {
-
-				System.out.print("~$terminal: ");
-				String inputConsole = scanner.nextLine();
-				String inputParams[] = inputConsole.split(" ");
-				int id = -1; // id de processo quando solicitado
 				try {
-					switch (inputParams[0]) {
+					sleep(1);
+					semaphoreTerminal.acquire();
 
-						case "cria":
-							System.out.println("Processo solicitado = " + inputParams[1]);
-							int idNewProcess = -1;
-							switch (inputParams[1]) {
+					System.out.print("~$terminal: ");
+					String inputConsole = scanner.nextLine();
+					String inputParams[] = inputConsole.split(" ");
+					int id = -1; // id de processo quando solicitado
+					try {
+						switch (inputParams[0]) {
 
-								case "PA":
-									idNewProcess = s.monitor.gp.criaProcesso(progs.PA);
-									System.out.println("id = " + idNewProcess);
-									break;
-								case "PB":
-									idNewProcess = s.monitor.gp.criaProcesso(progs.PB);
-									System.out.println(idNewProcess);
-									break;
+							case "cria":
+								System.out.println("Processo solicitado = " + inputParams[1]);
+								int idNewProcess = -1;
+								switch (inputParams[1]) {
 
-								case "PC":
-									idNewProcess = s.monitor.gp.criaProcesso(progs.PC);
-									System.out.println(idNewProcess);
-									break;
-								case "testIN":
-									idNewProcess = s.monitor.gp.criaProcesso(progs.testIN);
-									System.out.println(idNewProcess);
-									break;
-								case "testOUT":
-									idNewProcess = s.monitor.gp.criaProcesso(progs.testOUT);
-									System.out.println(idNewProcess);
-									break;
-								case "testInvalidAdrress":
-									idNewProcess = s.monitor.gp.criaProcesso(progs.testInvalidAdrress);
-									System.out.println(idNewProcess);
-									break;
-								case "testOverFlow":
-									idNewProcess = s.monitor.gp.criaProcesso(progs.testOverFlow);
-									System.out.println(idNewProcess);
-									break;
+									case "PA":
+										idNewProcess = s.monitor.gp.criaProcesso(progs.PA);
+										System.out.println("id = " + idNewProcess);
+										break;
+									case "PB":
+										idNewProcess = s.monitor.gp.criaProcesso(progs.PB);
+										System.out.println(idNewProcess);
+										break;
 
-								default:
-									System.out.println("Programa invalido ou inexistente.");
-									break;
-							}
-							break; // break criaProcesso
+									case "PC":
+										idNewProcess = s.monitor.gp.criaProcesso(progs.PC);
+										System.out.println(idNewProcess);
+										break;
+									case "testIN":
+										idNewProcess = s.monitor.gp.criaProcesso(progs.testIN);
+										System.out.println(idNewProcess);
+										break;
+									case "testOUT":
+										idNewProcess = s.monitor.gp.criaProcesso(progs.testOUT);
+										System.out.println(idNewProcess);
+										break;
+									case "testInvalidAdrress":
+										idNewProcess = s.monitor.gp.criaProcesso(progs.testInvalidAdrress);
+										System.out.println(idNewProcess);
+										break;
+									case "testOverFlow":
+										idNewProcess = s.monitor.gp.criaProcesso(progs.testOverFlow);
+										System.out.println(idNewProcess);
+										break;
 
-						case "executa":
-							//id = Integer.parseInt(inputParams[1]);
-							//s.monitor.executa(id);
-							System.out.println("A EXECUTAR");
-							monitor.gp.Escalonador();
-							break;
+									default:
+										System.out.println("Programa invalido ou inexistente.");
+										break;
+								}
+								break; // break criaProcesso
 
-						case "dump":
-							id = Integer.parseInt(inputParams[1]);
-							s.monitor.dumpId(id);
-							break;
-						case "dumpM":
-							int ini = Integer.parseInt(inputParams[1]);
-							int fim = Integer.parseInt(inputParams[2]) + 1; // correcao para comtemplar a ultima posicao
-																			// solicitada
-							s.monitor.dump(vm.m, ini, fim);
-							break;
+							case "executa":
+								// id = Integer.parseInt(inputParams[1]);
+								// s.monitor.executa(id);
+								System.out.println("A EXECUTAR");
+								monitor.gp.Escalonador();
+								break;
 
-						case "desaloca":
-							id = Integer.parseInt(inputParams[1]);
-							s.monitor.gp.desalocaProcesso(id);
-							;
-							break;
-						case "dumpAllFrames":
-							s.monitor.dumpAllFrames();// exibit todos os frames
-							break;
-						case "dumpFrame":
-							int frame = Integer.parseInt(inputParams[1]);
-							vm.gm.dumpFrame(frame);
-							break;
-						case "ps":
-							s.monitor.ps();
-							break;
-						case "exit":
-							System.out.println("Bye!");
-							SystemRun = false;
-							break;
-						case "":
-							break;
-						default:
-							System.out.println("Parametro invalido. Verifique em READM");
-							break;
+							case "dump":
+								id = Integer.parseInt(inputParams[1]);
+								s.monitor.dumpId(id);
+								break;
+							case "dumpM":
+								int ini = Integer.parseInt(inputParams[1]);
+								int fim = Integer.parseInt(inputParams[2]) + 1; // correcao para comtemplar a ultima
+																				// posicao
+																				// solicitada
+								s.monitor.dump(vm.m, ini, fim);
+								break;
 
+							case "desaloca":
+								id = Integer.parseInt(inputParams[1]);
+								s.monitor.gp.desalocaProcesso(id);
+								;
+								break;
+							case "dumpAllFrames":
+								s.monitor.dumpAllFrames();// exibit todos os frames
+								break;
+							case "dumpFrame":
+								int frame = Integer.parseInt(inputParams[1]);
+								vm.gm.dumpFrame(frame);
+								break;
+							case "ps":
+								s.monitor.ps();
+								break;
+							case "exit":
+								System.out.println("Bye!");
+								System.exit(0);
+								break;
+							case "":
+								break;
+							default:
+								System.out.println("Parametro invalido. Verifique em READM");
+								break;
+
+						}
+					} catch (Exception e) {// excecoes de entrada. Forma interativa
+
+						System.out.println(inputParams[0]);
+
+						String tab = ""; // deslocar as escritas de argumentos
+						while (tab.length() <= inputParams[0].length())
+							tab += " ";
+
+						System.out.println(tab + "^^^");
+						System.out.println(tab + "argumentos invalidos para solicitacao. Verifique em README");
+						System.out.println("Exception:" + e);
 					}
-				} catch (Exception e) {// excecoes de entrada. Forma interativa
 
-					System.out.println(inputParams[0]);
-
-					String tab = ""; // deslocar as escritas de argumentos
-					while (tab.length() <= inputParams[0].length())
-						tab += " ";
-
-					System.out.println(tab + "^^^");
-					System.out.println(tab + "argumentos invalidos para solicitacao. Verifique em README");
-					System.out.println("Exception:" + e);
+					semaphoreTerminal.release();
+				} catch (InterruptedException e1) {
+					// TODO Auto-generated catch block
+					System.out.println(getClass().getName() + ":" + e1);
+					e1.printStackTrace();
 				}
 
 			}
 
 		}
 
-	}//---------------------------------------------------------------------------------------------------------------------------------------------------------
+	}// ---------------------------------------------------------------------------------------------------------------------------------------------------------
 
 	/*
 	 * /**
@@ -975,6 +1236,7 @@ public class Sistema {
 	 */
 
 	public void trataTnterrupcoes(interrupt i) {
+		vm.cpu.interrupcaoAtiva = interrupt.None; // reseta a interrupcao da CPU para não afetar outras interrupcoes
 		System.out.print("I-N-T-E-R-R-U-P-T-I-O-N -> ");
 		if (i == interrupt.InvalidAdrress)
 			System.out.println("Acesso invalido a memoria");
@@ -988,9 +1250,18 @@ public class Sistema {
 			System.out.println("Fim da execucao do programa");
 			monitor.gp.Escalonador();
 		}
+		if (i == interrupt.Trap) {
+			System.out.println("TRAP");
+			// desvio para tratar a chamada de IO
+			tratamentoIO.chamadaIO();
+		}
+		if(i == interrupt.intIO){
+			System.out.println("intIO");
+			tratamentoIO.trataRotinaIO();
+		}
 
 		if (i == interrupt.Timer) {
-			System.out.println("Escalonamento");
+			System.out.println("Escalonamento Timer");
 			monitor.gp.Escalonador(); // chama o escalonador
 
 		}
@@ -1002,11 +1273,10 @@ public class Sistema {
 
 	// -------------------------------------------------------------------------------------------------------
 	// ------------------- instancia e testa sistema
-	public static void main(String args[]) {
+	public static void main(String args[]) throws InterruptedException {
 		Sistema s = new Sistema();
 		s.showConfiguration();
-		Terminal terminal = s.new Terminal(s);
-		terminal.start();
+		s.SystemInterfacesIO(s);
 	}
 
 	// -------------------------------------------------------------------------------------------------------
