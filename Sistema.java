@@ -14,6 +14,8 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
+import javax.swing.JOptionPane;
+
 public class Sistema {
 
 	// -------------------------------------------------------------------------------------------------------
@@ -943,13 +945,16 @@ public class Sistema {
 
 	public void SystemInterfacesIO(Sistema s) throws InterruptedException {
 		terminal = new Terminal(s);
-		console = new ConsoleIO(s);
 		tratamentoIO = new TratamentoIO(s);
+		console = new ConsoleIO(s);
 
 	}
 
 	public class TratamentoIO {
 		Sistema s;
+
+		Semaphore semaphoreBufferChamadaIO;
+
 		/**
 		 * buffer da chamada IO (TRAP) da CPU
 		 */
@@ -962,6 +967,7 @@ public class Sistema {
 
 		public TratamentoIO(Sistema s) {
 			this.s = s;
+			semaphoreBufferChamadaIO = new Semaphore(0);
 		}
 
 		public void trataRotinaIO() {
@@ -985,6 +991,7 @@ public class Sistema {
 					s.monitor.gp.CurrentProcessGP);
 
 			bufferChamadaIO.add(pedidosConsole);
+			semaphoreBufferChamadaIO.release();
 			s.monitor.gp.Escalonador();
 
 		}
@@ -1023,9 +1030,15 @@ public class Sistema {
 		}
 
 		public void run() {
-			while (true) {
-				while (tratamentoIO.bufferChamadaIO.size() != 0) {
-
+			while (true) { 
+				
+				try {
+					s.tratamentoIO.semaphoreBufferChamadaIO.acquire();
+				
+					
+					
+				System.out.println(s.console.getName() + "buffe size" + tratamentoIO.bufferChamadaIO.size());
+					
 					int reg8 = tratamentoIO.bufferChamadaIO.peek().reg8;
 					int reg9 = tratamentoIO.bufferChamadaIO.peek().reg9;
 					GP.PCB processInBuffer = tratamentoIO.bufferChamadaIO.peek().processo;
@@ -1038,7 +1051,10 @@ public class Sistema {
 						try {
 
 							// pausa a thread do Shell para não concorrer o input
-							terminal.semaphoreTerminal.acquire();
+							//terminal.semaphoreTerminal.acquire();
+							if ((terminal.semaphoreTerminal.tryAcquire(1, 1, TimeUnit.MILLISECONDS))==false){
+								JOptionPane.showInputDialog("Digite um numero");								
+							}else{
 							System.out.println("Requerimento de IO, pressione enter para continuar...");							
 							Scanner myObj = new Scanner(System.in); // instancia leituras do java
 							System.out.print("Input integer: ");
@@ -1051,6 +1067,7 @@ public class Sistema {
 																			// memoria
 							vm.m[addressT].opc = Opcode.DATA;
 							terminal.semaphoreTerminal.release();
+							}
 						} catch (InterruptedException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
@@ -1073,8 +1090,12 @@ public class Sistema {
 					}
 
 					tratamentoIO.bufferChamadaIO.removeFirst(); //tira o IO tratado
-
+				} catch (InterruptedException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
 				}
+
+				
 			}
 		}
 	}
@@ -1096,8 +1117,10 @@ public class Sistema {
 			Scanner scanner = new Scanner(System.in);
 			while (SystemRun) {
 				try {
-					sleep(1);
+					sleep(1000);
 					semaphoreTerminal.acquire();
+					
+					
 
 					System.out.print("~$terminal: ");
 					String inputConsole = scanner.nextLine();
@@ -1185,7 +1208,7 @@ public class Sistema {
 								System.out.println("Bye!");
 								System.exit(0);
 								break;
-							case "":
+							case "priority":
 								break;
 							default:
 								System.out.println("Parametro invalido. Verifique em READM");
