@@ -67,6 +67,7 @@ public class Sistema {
 				// verifica se não
 				if (vm.cpu.interrupcaoAtiva == interrupt.None
 						&& vm.cpu.semaphoreCPU.availablePermits() == 0) {
+							
 					vm.cpu.interrupcaoAtiva = interrupt.Timer;
 				}
 				try {
@@ -151,6 +152,7 @@ public class Sistema {
 		public void setRunning() {
 			semaphoreCPU.release();
 		}
+
 
 		public void run() { // execucao da CPU supoe que o contexto da CPU, vide acima, esta devidamente //
 							// setado
@@ -970,15 +972,15 @@ public class Sistema {
 			semaphoreBufferChamadaIO = new Semaphore(0);
 		}
 
-		public void trataRotinaIO() {
+		public void trataRetornoRotinaIO() {
 			// consome o buffer das rotinas de IO retornadas e tratadas
-			while (bufferReturnIO.size() != 0) {
+			//while (bufferReturnIO.size() != 0) {
 
 				bufferReturnIO.peek().processo.setState(STATE.READY);// passa processo para pronto
 				monitor.executa(bufferReturnIO.peek().processo.getId()); // executa o processo que retornou IO
 				bufferReturnIO.removeFirst();
 
-			}
+			//}
 
 		}
 
@@ -1082,14 +1084,17 @@ public class Sistema {
 						// ?? forma flexíveL, verificar ultima especificacao da Fase3
 					}
 					
-					while(vm.cpu.interrupcaoAtiva!=interrupt.None){ 
-						// avisa CPU que o IO foi feito (aguarda se houver interrucao ativa)
-						vm.cpu.interrupcaoAtiva = interrupt.intIO;
-						vm.cpu.semaphoreCPU.release();
-
+					tratamentoIO.bufferReturnIO.add( tratamentoIO.bufferChamadaIO.poll()); //tira o IO tratado do buffer de entradas, e passa para o buffer de IO concluidos
+																							//bufferReturnIO <- bufferChamadaIO
+					while(true){
+						if(vm.cpu.interrupcaoAtiva == interrupt.None){
+							vm.cpu.interrupcaoAtiva = interrupt.intIO;
+							
+						}
 					}
 
-					tratamentoIO.bufferChamadaIO.removeFirst(); //tira o IO tratado
+					
+					
 				} catch (InterruptedException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
@@ -1117,7 +1122,7 @@ public class Sistema {
 			Scanner scanner = new Scanner(System.in);
 			while (SystemRun) {
 				try {
-					sleep(1000);
+					sleep(250);
 					semaphoreTerminal.acquire();
 					
 					
@@ -1210,6 +1215,8 @@ public class Sistema {
 								break;
 							case "priority":
 								break;
+							case "":
+								break;
 							default:
 								System.out.println("Parametro invalido. Verifique em READM");
 								break;
@@ -1280,7 +1287,7 @@ public class Sistema {
 		}
 		if(i == interrupt.intIO){
 			System.out.println("intIO");
-			tratamentoIO.trataRotinaIO();
+			tratamentoIO.trataRetornoRotinaIO();
 		}
 
 		if (i == interrupt.Timer) {
