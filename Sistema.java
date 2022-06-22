@@ -14,6 +14,8 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
+import javax.swing.JOptionPane;
+
 public class Sistema {
 
 	// -------------------------------------------------------------------------------------------------------
@@ -63,12 +65,10 @@ public class Sistema {
 		public void run() {
 			while (true) {
 				// verifica se não
-				if (vm.cpu.interrupcaoAtiva == interrupt.None
-						&& vm.cpu.semaphoreCPU.availablePermits() == 0) {
-					vm.cpu.interrupcaoAtiva = interrupt.Timer;
-				}
+				
 				try {
-					sleep(3000);
+					sleep(5000);
+					vm.cpu.setInterrupt(interrupt.Timer);
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -84,7 +84,8 @@ public class Sistema {
 		private Word ir; // instruction register,
 		private int[] reg; // registradores da CPU
 
-		interrupt interrupcaoAtiva; // interrupcao a ser guardada pelo processador;
+		private interrupt interrupcaoAtiva; // interrupcao a ser guardada pelo processador;
+		private Stack<interrupt> stackInterrupt;
 		Semaphore semaphoreCPU;
 
 		private Word[] m; // CPU acessa MEMORIA, guarda referencia 'm' a ela. memoria nao muda. ee sempre
@@ -98,8 +99,9 @@ public class Sistema {
 															// CPU
 			m = _m; // usa o atributo 'm' para acessar a memoria.
 			reg = new int[10]; // aloca o espaço dos registradores
-			semaphoreCPU = new Semaphore(1);
-			semaphoreCPU.acquire(); // trava CPU ao iniciar o SISTEMA
+			semaphoreCPU = new Semaphore(2);
+			semaphoreCPU.acquire(2); // trava CPU ao iniciar o SISTEMA
+			stackInterrupt = new Stack<>();
 			new Timer(); // inicial relogio de escalonamento
 			start();
 		}
@@ -139,7 +141,27 @@ public class Sistema {
 		}
 
 		private void resetInterrupt() {
-			interrupcaoAtiva = interrupt.None; // Desabilita a interrupção que estiver ativa no momento
+			// setInterrupt(interrupt.None); // Desabilita a interrupção que estiver ativa
+			// no momento
+		}
+
+		public void setInterrupt(interrupt interrupt) {
+
+			this.stackInterrupt.push(interrupt);
+			if (interrupt == interrupt.intIO) {
+				JOptionPane.showMessageDialog(null, "Interrupção de IO recebida");
+				vm.cpu.semaphoreCPU.release();
+
+			}
+			/*
+			 * try {
+			 * semaphoreInterrupt.acquire();
+			 * this.interrupcaoAtiva = interrupt;
+			 * } catch (Exception e) {
+			 * //TODO: handle exception
+			 * }
+			 */
+
 		}
 
 		/**
@@ -222,7 +244,8 @@ public class Sistema {
 									} catch (Exception e) {
 										// gera um overflow
 										// --> LIGA INT (1)
-										interrupcaoAtiva = interrupt.Overflow;
+										setInterrupt(interrupt.Overflow);
+
 									}
 
 									break;
@@ -318,7 +341,7 @@ public class Sistema {
 									break;
 
 								case TRAP:
-									interrupcaoAtiva = interrupt.Trap;
+									setInterrupt(interrupt.Trap);
 
 									/*
 									 * if (reg[8] == 1) { // Verificado o valor dentro do registrador 8 || TRAP = 1
@@ -355,26 +378,40 @@ public class Sistema {
 									break;
 
 								case STOP: // por enquanto, para execucao
-									interrupcaoAtiva = interrupt.Stop; // Chama instrução Ativa do tipo Stop
+									setInterrupt(interrupt.Stop);// Chama instrução Ativa do tipo Stop
+
 									break;
 								default:
 									// opcode desconhecido*
 									// liga interrup (2)
-									if(interrupcaoAtiva != interrupt.None) //podem haver interrupcoes para chamada
-										interrupcaoAtiva = interrupt.InvalidOpcode; // Chama para instrução ativa do tipo
+									if (stackInterrupt.peek() == interrupt.None) // podem haver interrupcoes para
+																					// chamada
+										setInterrupt(interrupt.InvalidOpcode); // Chama para instrução ativa do tipo
 																				// InvalidOpcode
 							}
 						} catch (IndexOutOfBoundsException e) { // execoes para acesso a elemento de memoria maior que o
 																// vetor
-							interrupcaoAtiva = interrupt.InvalidAdrress;
+
+							setInterrupt(interrupt.InvalidAdrress);
 						}
 
 						// VERIFICA INTERRUPÇÃO !!! - TERCEIRA FASE DO CICLO DE INSTRUÇÕES
 						// if int ligada - vai para tratamento da int
 						// desviar para rotina java que trata int
-						if (interrupcaoAtiva != interrupt.None) {
+						if (!stackInterrupt.empty()) // verifica se a stack não está vazia
+						{
+							if(stackInterrupt.contains(interrupt.intIO))//prioriza intIO
+							{
+								stackInterrupt.removeElement(interrupt.intIO);
+								stateRun = false; // para execucao do loop while/programa
+								trataTnterrupcoes(interrupt.intIO); // trata interrupcao
+							}
+							else{
+							interrupcaoAtiva = stackInterrupt.pop();
 							stateRun = false; // para execucao do loop while/programa
 							trataTnterrupcoes(interrupcaoAtiva); // trata interrupcao
+							//interrupcaoAtiva = interrupt.None;//reseta interrupcao para evitar loop
+							}
 						}
 
 					}
@@ -645,7 +682,7 @@ public class Sistema {
 								.filter(e -> e.getState() == STATE.READY)
 								.forEach(a -> ReadyProcess.add(a.getId())); // Filtra processos em estadosgetId() pronto
 
-						if (ReadyProcess.size() != 0) {						
+						if (ReadyProcess.size() != 0) {
 
 							System.out.println("processos prontos ID: ");
 							ReadyProcess.stream().forEach(e -> System.out.print("|" + e + "|"));
@@ -654,10 +691,10 @@ public class Sistema {
 							monitor.executa(ReadyProcess.get(0));// executa o primeiro processo filtrado do estado
 																	// pronto
 
+						} else {
+							System.out.println("Sem processos prontos para execucao...");
+
 						}
-						else{
-							System.out.println("Sem processos prontos para execucao...");				
-						}					
 
 					} catch (InterruptedException e1) {
 						// TODO Auto-generated catch block
@@ -877,8 +914,9 @@ public class Sistema {
 				if (sucessNewAllocaded) {
 					System.out.println("warning: new page is allocated");
 				} else {
-					vm.cpu.interrupcaoAtiva = interrupt.InvalidAdrress; // se nao conseguiu alocar, retorna problema de
-																		// acesso a memoria
+					vm.cpu.setInterrupt(interrupt.InvalidAdrress);
+					// se nao conseguiu alocar, retorna problema de
+					// acesso a memoria
 				}
 			}
 
@@ -943,13 +981,16 @@ public class Sistema {
 
 	public void SystemInterfacesIO(Sistema s) throws InterruptedException {
 		terminal = new Terminal(s);
-		console = new ConsoleIO(s);
 		tratamentoIO = new TratamentoIO(s);
+		console = new ConsoleIO(s);
 
 	}
 
 	public class TratamentoIO {
 		Sistema s;
+
+		Semaphore semaphoreBufferChamadaIO;
+
 		/**
 		 * buffer da chamada IO (TRAP) da CPU
 		 */
@@ -962,17 +1003,19 @@ public class Sistema {
 
 		public TratamentoIO(Sistema s) {
 			this.s = s;
+			semaphoreBufferChamadaIO = new Semaphore(0);
 		}
 
-		public void trataRotinaIO() {
+		public void trataRetornoRotinaIO() {
 			// consome o buffer das rotinas de IO retornadas e tratadas
-			while (bufferReturnIO.size() != 0) {
+			// while (bufferReturnIO.size() != 0) {
+			
+			GP.PCB processFirstReturnIO = bufferReturnIO.poll().processo;
+			JOptionPane.showMessageDialog(null, "ID do primeiro processo no retorno = " + processFirstReturnIO.getId());
+			monitor.executa(processFirstReturnIO.getId()); // executa o processo que retornou IO
+			monitor.ps();
 
-				bufferReturnIO.peek().processo.setState(STATE.READY);// passa processo para pronto
-				monitor.executa(bufferReturnIO.peek().processo.getId()); // executa o processo que retornou IO
-				bufferReturnIO.removeFirst();
-
-			}
+			// }
 
 		}
 
@@ -985,6 +1028,7 @@ public class Sistema {
 					s.monitor.gp.CurrentProcessGP);
 
 			bufferChamadaIO.add(pedidosConsole);
+			semaphoreBufferChamadaIO.release();
 			s.monitor.gp.Escalonador();
 
 		}
@@ -1024,7 +1068,11 @@ public class Sistema {
 
 		public void run() {
 			while (true) {
-				while (tratamentoIO.bufferChamadaIO.size() != 0) {
+
+				try {
+					s.tratamentoIO.semaphoreBufferChamadaIO.acquire();
+
+					System.out.println(s.console.getName() + "buffe size" + tratamentoIO.bufferChamadaIO.size());
 
 					int reg8 = tratamentoIO.bufferChamadaIO.peek().reg8;
 					int reg9 = tratamentoIO.bufferChamadaIO.peek().reg9;
@@ -1034,27 +1082,43 @@ public class Sistema {
 										// chamada
 										// de
 										// IN
+
+						// pausa a thread do Shell para não concorrer o input
+						// terminal.semaphoreTerminal.acquire();
+						// if ((terminal.semaphoreTerminal.tryAcquire(1, 1,
+						// TimeUnit.MILLISECONDS))==false){
+						// String input = JOptionPane.showInputDialog("Digite um numero");
+						// }else{
+						String inputUser = JOptionPane.showInputDialog("Digite um numero");
+						// System.out.println("Requerimento de IO, pressione enter para continuar...");
+						// Scanner myObj = new Scanner(System.in); // instancia leituras do java
+						// System.out.print("Input integer: ");
+						// String inputUser = myObj.next(); // le o numero do usuario
+						// System.out.println("VALOR LIDO = " + inputUser);
+						JOptionPane.showMessageDialog(null, "Entrada = " + inputUser);
+						int addressT = vm.gm.translate(reg9, processInBuffer.tPaginaProcesso);
+						JOptionPane.showMessageDialog(null, "Adress = " + addressT);
+						vm.m[addressT].p = Integer.parseInt(inputUser); // conforme a entrada e salva na
+																		// posição da
+																		// memoria
+						vm.m[addressT].opc = Opcode.DATA;
+
+						tratamentoIO.bufferReturnIO.add(tratamentoIO.bufferChamadaIO.poll()); // tira o IO tratado do
+																								// buffer de entradas, e
+																								// passa para o buffer
+																								// de IO concluidos
+						// bufferReturnIO <- bufferChamadaIO
+							
+						JOptionPane.showMessageDialog(null, "TAMANHO DO BUFFER ENTRADA " + tratamentoIO.bufferChamadaIO.size());
+						JOptionPane.showMessageDialog(null, "TAMANHO DO BUFFER SAIDA " + tratamentoIO.bufferReturnIO.size());
 						
-						try {
-
-							// pausa a thread do Shell para não concorrer o input
-							terminal.semaphoreTerminal.acquire();
-							System.out.println("Requerimento de IO, pressione enter para continuar...");							
-							Scanner myObj = new Scanner(System.in); // instancia leituras do java
-							System.out.print("Input integer: ");
-							String inputUser = myObj.next(); // le o numero do usuario
-							System.out.println("VALOR LIDO = " + inputUser);
-							int addressT = vm.gm.translate(reg9, processInBuffer.tPaginaProcesso);
-
-							vm.m[addressT].p = Integer.parseInt(inputUser); // conforme a entrada e salva na
-																			// posição da
-																			// memoria
-							vm.m[addressT].opc = Opcode.DATA;
-							terminal.semaphoreTerminal.release();
-						} catch (InterruptedException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
+						
+						vm.cpu.setInterrupt(interrupt.intIO);
+						JOptionPane.showMessageDialog(null, "Setou interrupcao");
+								
+							
+						
+						// }
 
 					}
 
@@ -1064,17 +1128,12 @@ public class Sistema {
 						System.out.println(output);
 						// ?? forma flexíveL, verificar ultima especificacao da Fase3
 					}
-					
-					while(vm.cpu.interrupcaoAtiva!=interrupt.None){ 
-						// avisa CPU que o IO foi feito (aguarda se houver interrucao ativa)
-						vm.cpu.interrupcaoAtiva = interrupt.intIO;
-						vm.cpu.semaphoreCPU.release();
 
-					}
-
-					tratamentoIO.bufferChamadaIO.removeFirst(); //tira o IO tratado
-
+				} catch (InterruptedException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
 				}
+
 			}
 		}
 	}
@@ -1090,13 +1149,12 @@ public class Sistema {
 			start();
 		}
 
-
 		public void run() {
 			boolean SystemRun = true;
 			Scanner scanner = new Scanner(System.in);
 			while (SystemRun) {
 				try {
-					sleep(1);
+					// sleep(250);
 					semaphoreTerminal.acquire();
 
 					System.out.print("~$terminal: ");
@@ -1185,6 +1243,8 @@ public class Sistema {
 								System.out.println("Bye!");
 								System.exit(0);
 								break;
+							case "priority":
+								break;
 							case "":
 								break;
 							default:
@@ -1236,7 +1296,6 @@ public class Sistema {
 	 */
 
 	public void trataTnterrupcoes(interrupt i) {
-		vm.cpu.interrupcaoAtiva = interrupt.None; // reseta a interrupcao da CPU para não afetar outras interrupcoes
 		System.out.print("I-N-T-E-R-R-U-P-T-I-O-N -> ");
 		if (i == interrupt.InvalidAdrress)
 			System.out.println("Acesso invalido a memoria");
@@ -1255,16 +1314,19 @@ public class Sistema {
 			// desvio para tratar a chamada de IO
 			tratamentoIO.chamadaIO();
 		}
-		if(i == interrupt.intIO){
+		if (i == interrupt.intIO) {
 			System.out.println("intIO");
-			tratamentoIO.trataRotinaIO();
+			vm.cpu.setInterrupt(interrupt.None);
+			monitor.gp.CurrentProcessGP.setState(STATE.READY); // recebeu a intrrupcao de IO, precisa colocar o processo
+																// atual em pronto
+			tratamentoIO.trataRetornoRotinaIO();
 		}
 
 		if (i == interrupt.Timer) {
 			System.out.println("Escalonamento Timer");
 			monitor.gp.Escalonador(); // chama o escalonador
-
 		}
+
 	}
 
 	// ------------------- S I S T E M A - fim
